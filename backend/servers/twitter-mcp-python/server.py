@@ -14,7 +14,7 @@ import uuid
 from typing import Optional, List
 from datetime import datetime
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from twitter_api import TwitterClient
 
 # Configure logging
