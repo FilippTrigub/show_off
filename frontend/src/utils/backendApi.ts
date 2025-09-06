@@ -1,7 +1,7 @@
 // Backend API integration for FastAPI + MongoDB backend
 import { fetchWithExponentialBackoff } from './api';
 
-const BACKEND_URL = 'http://localhost:8001'; // FastAPI backend port
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:8001';
 
 export interface ContentItem {
     _id: string;
