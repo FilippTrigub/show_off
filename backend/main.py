@@ -31,6 +31,18 @@ def load_prompts():
 def get_mongodb_client(uri):
     return pymongo.MongoClient(uri, tlsAllowInvalidCertificates=True)
 
+def get_mcp_client(server_config, mock_mcp=False):
+    """Initialize MCP client for a specific server or return mock client"""
+    if mock_mcp:
+        class MockClient:
+            def __init__(self, server_name):
+                self.server_name = server_name
+            def generate(self, prompt):
+                return f"Mock response from {self.server_name} for prompt: {prompt}"
+        return MockClient(server_config.get('type', 'unknown'))
+    else:
+        return Client(server_config['url'])
+
 @app.post("/generate-content")
 async def generate_content(request: GenerateRequest):
     config = load_config()
@@ -38,49 +50,92 @@ async def generate_content(request: GenerateRequest):
 
     # Load environment variables for secrets if not set in config
     mongodb_uri = os.getenv("MONGODB_URI") or config['mongodb']['uri']
-    mcp_server_url = os.getenv("MCP_SERVER_URL") or config['mcp']['server_url']
-
+    
     # Initialize MongoDB client
     mongo_client = get_mongodb_client(mongodb_uri)
     db = mongo_client['ai_content_publisher']
     collection = db['contents']
-
-    # Initialize MCP client or mock
-    mock_mcp = os.getenv("MOCK_MCP", "false").lower() == "true"
-    if mock_mcp:
-        class MockClient:
-            def generate(self, prompt):
-                return f"Mock response for prompt: {prompt}"
-        mcp_client = MockClient()
-    else:
-        mcp_client = Client(mcp_server_url)
 
     # Load prompts from prompts.yml
     prompts = prompts_data.get('prompts', [])
     if not prompts:
         raise HTTPException(status_code=400, detail="No prompts found in prompts.yml")
 
-    # For now, use the first prompt; can be extended to select based on event
-    selected_prompt = prompts[0]['content']
+    # Get server configurations
+    mcp_servers = config.get('mcp', {}).get('servers', {})
+    if not mcp_servers:
+        raise HTTPException(status_code=400, detail="No MCP servers configured in config.yml")
 
-    # Call MCP server to generate content
-    response = mcp_client.generate(prompt=selected_prompt)
-
+    mock_mcp = os.getenv("MOCK_MCP", "false").lower() == "true"
+    generated_contents = []
+    
+    # Process each prompt with its designated server
+    for prompt_config in prompts:
+        prompt_name = prompt_config.get('name', 'unknown')
+        prompt_content = prompt_config.get('content', '')
+        server_name = prompt_config.get('server', 'blackbox')  # Default to blackbox
+        
+        # Get server configuration
+        server_config = mcp_servers.get(server_name)
+        if not server_config:
+            print(f"Warning: Server '{server_name}' not found in config, skipping prompt '{prompt_name}'")
+            continue
+            
+        # Initialize MCP client for this server
+        try:
+            mcp_client = get_mcp_client(server_config, mock_mcp)
+            
+            # Generate content using the specific server
+            response = mcp_client.generate(prompt=prompt_content)
+            
+            if not mock_mcp:
+                # Save generated content to MongoDB
+                content_doc = {
+                    "repository": request.repository,
+                    "event": request.event,
+                    "commit_sha": request.commit_sha,
+                    "branch": request.branch,
+                    "prompt_name": prompt_name,
+                    "prompt": prompt_content,
+                    "server_used": server_name,
+                    "content": response,
+                    "status": "pending_validation"
+                }
+                result = collection.insert_one(content_doc)
+                generated_contents.append({
+                    "prompt_name": prompt_name,
+                    "server_used": server_name,
+                    "content_id": str(result.inserted_id),
+                    "status": "saved"
+                })
+            else:
+                generated_contents.append({
+                    "prompt_name": prompt_name,
+                    "server_used": server_name,
+                    "content": response,
+                    "status": "mock"
+                })
+                
+        except Exception as e:
+            print(f"Error processing prompt '{prompt_name}' with server '{server_name}': {str(e)}")
+            generated_contents.append({
+                "prompt_name": prompt_name,
+                "server_used": server_name,
+                "error": str(e),
+                "status": "error"
+            })
+            continue
+    
     if not mock_mcp:
-        # Save generated content to MongoDB
-        content_doc = {
-            "repository": request.repository,
-            "event": request.event,
-            "commit_sha": request.commit_sha,
-            "branch": request.branch,
-            "prompt": selected_prompt,
-            "content": response,
-            "status": "pending_validation"
+        return {
+            "message": f"Processed {len(generated_contents)} prompts with multiple servers.",
+            "results": generated_contents
         }
-        collection.insert_one(content_doc)
-        return {"message": "Content generated and saved to MongoDB.", "content_id": str(content_doc["_id"])}
     else:
-        return {"message": "Content generated (mock mode).", "content": response}
+        return {
+            "message": f"Processed {len(generated_contents)} prompts (mock mode).",
+            "results": generated_contents
+        }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

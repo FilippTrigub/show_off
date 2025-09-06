@@ -4,12 +4,16 @@
 prompts:
   - name: "code_changes_summary"
     content: "Generate a summary of recent codebase changes in a professional tone."
+    server: "blackbox"
 
   - name: "email_notification"
     content: "Create an email notification about the latest updates to the codebase."
+    server: "openai"
 
   - name: "linkedin_post"
     content: "Draft a LinkedIn post announcing new features or changes."
+    server: "claude"
 
   - name: "tweet_update"
     content: "Write a concise tweet about recent code commits."
+    server: "blackbox"
