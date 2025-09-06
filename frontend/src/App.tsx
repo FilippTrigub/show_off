@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './styles/index.css';
-import { getContentItems, updateContentStatus, updateContentText, generateContent, testBackendConnection, ContentItem } from './utils/backendApi';
+import { getContentItems, updateContentStatus, updateContentText, testBackendConnection, ContentItem } from './utils/backendApi';
 
 // TypeScript interfaces
 interface Author {
@@ -180,44 +180,6 @@ const App: React.FC = () => {
         }
     };
 
-    const handleGenerateNew = async () => {
-        try {
-            setIsLoading(prev => ({ ...prev, 'generate': true }));
-            
-            const result = await generateContent({
-                repository: 'user/current-project',
-                event: 'push',
-                commit_sha: 'abc123',
-                branch: 'main'
-            });
-            
-            showNotification(`New content generated! ${result.message}`);
-            
-            // Reload content
-            const contentItems = await getContentItems();
-            const backendPosts = contentItems.map(convertContentItemToPost);
-            const groupedPosts = backendPosts.reduce((acc, post) => {
-                const key = `${post.repository || 'unknown'}-${post.branch || 'main'}`;
-                if (!acc[key]) {
-                    acc[key] = [];
-                }
-                acc[key].push(post);
-                return acc;
-            }, {} as Record<string, Post[]>);
-
-            const newPushes: PushHistory[] = Object.entries(groupedPosts).map(([key, posts]) => ({
-                id: key,
-                posts
-            }));
-            setPostHistory(newPushes);
-            
-        } catch (error) {
-            console.error('Error generating content:', error);
-            showNotification('Failed to generate new content');
-        } finally {
-            setIsLoading(prev => ({ ...prev, 'generate': false }));
-        }
-    };
 
     const rephrasePost = async (id: string) => {
         const post = posts.find(p => p.id === id);
@@ -364,18 +326,6 @@ const App: React.FC = () => {
                     ))}
                 </ul>
 
-                {/* Generate New Content Button */}
-                <button
-                    onClick={handleGenerateNew}
-                    disabled={isLoading['generate']}
-                    className="modern-button w-full mt-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold py-3 px-4 rounded-2xl transition-all disabled:opacity-50"
-                >
-                    {isLoading['generate'] ? (
-                        <div className="loading-spinner mx-auto"></div>
-                    ) : (
-                        <>✨ Generate New Content</>
-                    )}
-                </button>
             </nav>
 
             {/* Main Content */}

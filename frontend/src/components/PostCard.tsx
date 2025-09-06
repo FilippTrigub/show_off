@@ -7,7 +7,6 @@ interface PostCardProps {
     onDisapprove: (id: string) => void;
     onRephrase: (id: string) => void;
     onReadAloud: (id: string) => void;
-    onMediaUpload: (event: React.ChangeEvent<HTMLInputElement>, id: string) => void;
     onContentChange: (event: React.ChangeEvent<HTMLTextAreaElement>, id: string) => void;
 }
 
@@ -17,7 +16,6 @@ const PostCard: React.FC<PostCardProps> = ({
     onDisapprove,
     onRephrase,
     onReadAloud,
-    onMediaUpload,
     onContentChange
 }) => {
     // Renders the media content based on post data
@@ -41,23 +39,8 @@ const PostCard: React.FC<PostCardProps> = ({
             </div>
 
             {/* Media Section */}
-            <div className="rounded-xl overflow-hidden mb-4 relative">
+            <div className="rounded-xl overflow-hidden mb-4">
                 {renderMedia(post)}
-                <label htmlFor={`media-upload-${post.id}`} className="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer text-white text-lg font-bold">
-                    <span className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        Edit Media
-                    </span>
-                </label>
-                <input
-                    type="file"
-                    id={`media-upload-${post.id}`}
-                    className="hidden"
-                    accept="image/*,video/*"
-                    onChange={(e) => onMediaUpload(e, post.id)}
-                />
             </div>
 
             <textarea
