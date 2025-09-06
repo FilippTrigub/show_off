@@ -105,51 +105,46 @@ class FastMCPCLI:
     async def _get_client(self, server_name: str) -> Client:
         """Get or create a FastMCP client for the specified server"""
         if server_name not in self.clients:
-            # Start the server if not already running
-            if not await self._start_server(server_name):
-                raise RuntimeError(f"Failed to start {server_name} server")
+            server_config = self._server_config.get(server_name)
+            if not server_config:
+                raise RuntimeError(f"Unknown server: {server_name}")
                 
-            # Create client connected to the server process
-            process = self.server_processes[server_name]
-            if process:
-                self.clients[server_name] = Client(process)
-            else:
-                raise RuntimeError(f"No process for {server_name} server")
+            # Create client with STDIO transport that manages the server process
+            from fastmcp.client.transports import StdioTransport
+            
+            # Get the script path
+            script_path = Path(__file__).parent / server_config["script"]
+            
+            # Create STDIO transport that will manage the server process
+            transport = StdioTransport(
+                command="uv",
+                args=["run", "python", str(script_path)],
+                env=server_config["env"],
+                cwd=str(Path(__file__).parent)
+            )
+            
+            self.clients[server_name] = Client(transport)
                 
         return self.clients[server_name]
     
     async def start_all_servers(self):
-        """Start all available servers"""
-        console.print("[cyan]Starting all MCP servers...[/]")
-        
-        for server_name in self._server_config.keys():
-            await self._start_server(server_name)
-            
-        console.print(f"[green]Started {len(self.server_processes)} servers[/]")
+        """Initialize clients for all available servers (servers start on-demand)"""
+        console.print("[cyan]Preparing FastMCP clients for all servers...[/]")
+        console.print(f"[green]Ready to connect to {len(self._server_config)} servers on-demand[/]")
     
     async def cleanup(self):
-        """Clean up all server processes and clients"""
-        console.print("[cyan]Cleaning up servers...[/]")
+        """Clean up all clients (StdioTransport manages server processes automatically)"""
+        console.print("[cyan]Cleaning up FastMCP clients...[/]")
         
-        for client in self.clients.values():
+        for server_name, client in self.clients.items():
             try:
                 await client.close()
-            except:
-                pass
-        
-        for server_name, process in self.server_processes.items():
-            try:
-                process.terminate()
-                await asyncio.wait_for(process.wait(), timeout=5.0)
-                console.print(f"[yellow]Terminated {server_name} server[/]")
-            except asyncio.TimeoutError:
-                process.kill()
-                console.print(f"[red]Killed {server_name} server[/]")
-            except:
-                pass
+                console.print(f"[yellow]Closed {server_name} client[/]")
+            except Exception as e:
+                console.print(f"[red]Error closing {server_name} client: {e}[/]")
         
         self.clients.clear()
-        self.server_processes.clear()
+        self.server_processes.clear()  # Keep for compatibility
     
     async def start_cli(self):
         """Start the interactive CLI"""
@@ -158,16 +153,16 @@ class FastMCPCLI:
         console.print("[bold magenta]========================================[/]")
         
         try:
-            # Start all servers
+            # Prepare clients for all servers
             await self.start_all_servers()
             
-            if not self.server_processes:
-                console.print("[bold red]No servers started. Check configuration and credentials.[/]")
+            if not self._server_config:
+                console.print("[bold red]No servers configured. Check configuration.[/]")
                 return
             
-            console.print(f"[bold green]FastMCP clients ready for {len(self.server_processes)} servers![/]")
+            console.print(f"[bold green]FastMCP clients ready for {len(self._server_config)} servers![/]")
             console.print("[yellow]Type 'exit' or 'quit' to end the session[/]")
-            console.print("[yellow]Available servers: " + ", ".join(self.server_processes.keys()) + "[/]")
+            console.print("[yellow]Available servers: " + ", ".join(self._server_config.keys()) + "[/]")
             
             # Main chat loop
             while True:
@@ -184,7 +179,7 @@ class FastMCPCLI:
                     parts = user_input[1:].split(" ", 1)
                     if len(parts) == 2:
                         server_name, command = parts
-                        if server_name in self.server_processes:
+                        if server_name in self._server_config:
                             await self._handle_server_command(server_name, command)
                         else:
                             console.print(f"[bold red]Unknown server: {server_name}[/]")
@@ -236,7 +231,7 @@ class FastMCPCLI:
         console.print(f"[cyan]Broadcasting to all servers: {command}[/]")
         
         tasks = []
-        for server_name in self.server_processes.keys():
+        for server_name in self._server_config.keys():
             task = self._handle_server_command(server_name, command)
             tasks.append(task)
         

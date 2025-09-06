@@ -121,36 +121,50 @@ class FastMCPExecutor:
     async def _get_client(self, server_name: str) -> Optional[Client]:
         """Get or create a FastMCP client for the specified server"""
         if server_name not in self.clients:
-            # Start the server if not already running
-            if not await self._start_server(server_name):
+            server_config = self._server_config.get(server_name)
+            if not server_config:
                 return None
                 
-            # Create client connected to the server process
-            process = self.server_processes[server_name]
-            if process:
-                self.clients[server_name] = Client(process)
-            else:
-                return None
+            # Create client with STDIO transport that manages the server process
+            from fastmcp.client.transports import StdioTransport
+            
+            # Build environment variables from config
+            env = dict(os.environ)
+            for key, value in server_config["env"].items():
+                # Simple environment variable substitution
+                if value.startswith("${") and value.endswith("}"):
+                    env_var = value[2:-1].split(":-")
+                    env_key = env_var[0]
+                    default_val = env_var[1] if len(env_var) > 1 else ""
+                    env[key] = os.getenv(env_key, default_val)
+                else:
+                    env[key] = value
+            
+            # Get the script path
+            script_path = Path(__file__).parent / server_config["script"]
+            
+            # Create STDIO transport that will manage the server process
+            transport = StdioTransport(
+                command="uv",
+                args=["run", "python", str(script_path)],
+                env=env,
+                cwd=str(Path(__file__).parent)
+            )
+            
+            self.clients[server_name] = Client(transport)
                 
         return self.clients[server_name]
     
     async def cleanup(self):
-        """Clean up all server processes and clients"""
+        """Clean up all clients (StdioTransport manages server processes automatically)"""
         for client in self.clients.values():
             try:
                 await client.close()
             except:
                 pass
         
-        for process in self.server_processes.values():
-            try:
-                process.terminate()
-                await process.wait()
-            except:
-                pass
-        
         self.clients.clear()
-        self.server_processes.clear()
+        self.server_processes.clear()  # Keep for compatibility but not used
     
     async def execute_parallel(self, prompt: str, server_names: List[str], 
                              prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
