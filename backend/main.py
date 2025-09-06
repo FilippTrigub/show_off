@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from pathlib import Path
-from executor import execute_mcp_client, execute_with_fallback, get_error_summary
+from executor import execute_mcp_client, execute_with_fallback, get_error_summary, get_performance_summary
 
 load_dotenv()
 
@@ -87,7 +87,7 @@ async def generate_content(request: GenerateRequest):
         server_name = prompt_config.get('server', 'blackbox')  # Default to blackbox
         
         # Execute prompt on specified server
-        executor_results = execute_mcp_client(
+        executor_results = await execute_mcp_client(
             prompt=prompt_content,
             server_names=[server_name],
             config=config,
@@ -162,7 +162,7 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
     # Use executor with fallback pattern - try multiple servers for best result
     rephrase_servers = ["openai", "claude", "blackbox"]  # Prefer language models for rephrasing
     
-    result = execute_with_fallback(
+    result = await execute_with_fallback(
         prompt=rephrase_prompt,
         server_names=rephrase_servers,
         config=config,
@@ -209,7 +209,7 @@ async def approve_and_post_content(content_id: str):
     # Use executor with social media focused servers
     posting_servers = ["blackbox"]  # Could extend to dedicated social media MCP servers
     
-    executor_results = execute_mcp_client(
+    executor_results = await execute_mcp_client(
         prompt=posting_prompt,
         server_names=posting_servers,
         config=config,

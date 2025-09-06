@@ -1,141 +1,261 @@
 """
-MCP Client Executor Module
+Fast-Agent Executor Module
 
-This module provides standardized execution of MCP (Model Context Protocol) clients
-across multiple servers with error handling and result standardization.
+This module provides parallel execution of AI models/MCP servers using fast-agent
+with proper concurrent processing and result standardization.
 """
 import os
-from typing import List, Optional
-from fastmcp.client import Client
+import asyncio
+from typing import List, Dict, Optional, Union
+from dataclasses import dataclass
+from pathlib import Path
+from mcp_agent.core.fastagent import FastAgent
 
 
+@dataclass
 class ExecutorResult:
-    """Result object for client executor operations"""
-    
-    def __init__(self, prompt_name: str, server_name: str, content: str = None, 
-                 error: str = None, status: str = "generated"):
-        self.prompt_name = prompt_name
-        self.server_name = server_name
-        self.content = content
-        self.error = error
-        self.status = status
+    """Result object for parallel executor operations"""
+    prompt_name: str
+    server_name: str
+    content: Optional[str] = None
+    error: Optional[str] = None
+    status: str = "generated"
+    execution_time: Optional[float] = None
 
     def __repr__(self):
         return f"ExecutorResult(prompt='{self.prompt_name}', server='{self.server_name}', status='{self.status}')"
 
 
-def get_mcp_client(server_config: dict, mock_mcp: bool = False):
+class FastAgentExecutor:
     """
-    Initialize MCP client for a specific server or return mock client
+    Parallel executor using fast-agent for concurrent AI model execution
+    """
     
-    Args:
-        server_config: Dictionary containing server configuration
-        mock_mcp: Whether to return a mock client instead of real client
+    def __init__(self, config_path: Optional[str] = None):
+        """
+        Initialize the FastAgent executor
         
-    Returns:
-        MCP client instance (real or mock)
-    """
-    if mock_mcp:
-        class MockClient:
-            def __init__(self, server_name):
-                self.server_name = server_name
-                
-            def generate(self, prompt):
-                return f"Mock response from {self.server_name} for prompt: {prompt[:50]}..."
-                
-        return MockClient(server_config.get('type', 'unknown'))
-    else:
-        return Client(server_config['url'])
-
-
-def execute_mcp_client(prompt: str, server_names: List[str], config: dict, 
-                      prompt_name: str = "custom_prompt", mock_mcp: Optional[bool] = None) -> List[ExecutorResult]:
-    """
-    Standardized client executor for MCP servers
+        Args:
+            config_path: Path to fastagent.config.yaml (defaults to current directory)
+        """
+        self.config_path = config_path or Path(__file__).parent / "fastagent.config.yaml"
+        self.fast_agent = FastAgent("AI Content Executor")
+        self._setup_agents()
     
-    This function provides a unified interface for executing prompts across
-    multiple MCP servers with consistent error handling and result formatting.
+    def _setup_agents(self):
+        """Setup fast-agent configurations for different servers/models"""
+        
+        # Define agents for different AI models/servers
+        @self.fast_agent.agent(
+            "blackbox_agent",
+            "You are a helpful AI assistant powered by Blackbox AI. Provide accurate and concise responses.",
+            servers=["blackbox"] if not self._is_mock_mode() else [],
+            model="haiku" if self._is_mock_mode() else None
+        )
+        async def blackbox_handler():
+            pass
+        
+        @self.fast_agent.agent(
+            "openai_agent", 
+            "You are a helpful AI assistant powered by OpenAI. Provide accurate and engaging responses.",
+            servers=["openai_server"] if not self._is_mock_mode() else [],
+            model="gpt4" if self._is_mock_mode() else None
+        )
+        async def openai_handler():
+            pass
+            
+        @self.fast_agent.agent(
+            "claude_agent",
+            "You are Claude, an AI assistant created by Anthropic. Provide helpful and thoughtful responses.",
+            servers=["claude_server"] if not self._is_mock_mode() else [],
+            model="sonnet" if self._is_mock_mode() else None
+        )
+        async def claude_handler():
+            pass
+        
+        # Define parallel workflow for concurrent execution
+        @self.fast_agent.parallel(
+            name="concurrent_executor",
+            fan_out=["blackbox_agent", "openai_agent", "claude_agent"]
+        )
+        async def parallel_execution():
+            pass
+    
+    def _is_mock_mode(self) -> bool:
+        """Check if running in mock mode"""
+        return os.getenv("MOCK_MCP", "false").lower() == "true"
+    
+    async def execute_parallel(self, prompt: str, server_names: List[str], 
+                             prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
+        """
+        Execute prompt across multiple servers/models in parallel
+        
+        Args:
+            prompt: The prompt text to send
+            server_names: List of server names to execute against  
+            prompt_name: Name identifier for the prompt
+            
+        Returns:
+            List of ExecutorResult objects with results from each server
+        """
+        results = []
+        
+        # Map server names to agent names
+        server_agent_map = {
+            "blackbox": "blackbox_agent",
+            "openai": "openai_agent", 
+            "claude": "claude_agent"
+        }
+        
+        # Filter to requested agents
+        requested_agents = []
+        for server_name in server_names:
+            agent_name = server_agent_map.get(server_name)
+            if agent_name:
+                requested_agents.append(agent_name)
+            else:
+                results.append(ExecutorResult(
+                    prompt_name=prompt_name,
+                    server_name=server_name,
+                    error=f"Unknown server: {server_name}",
+                    status="error"
+                ))
+        
+        if not requested_agents:
+            return results
+        
+        try:
+            # Execute in parallel using fast-agent
+            async with self.fast_agent.run() as agent:
+                # Create tasks for parallel execution
+                tasks = []
+                for agent_name in requested_agents:
+                    server_name = next(k for k, v in server_agent_map.items() if v == agent_name)
+                    task = self._execute_single_agent(agent, agent_name, prompt, prompt_name, server_name)
+                    tasks.append(task)
+                
+                # Wait for all tasks to complete
+                parallel_results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # Process results
+                for i, result in enumerate(parallel_results):
+                    if isinstance(result, Exception):
+                        server_name = next(k for k, v in server_agent_map.items() if v == requested_agents[i])
+                        results.append(ExecutorResult(
+                            prompt_name=prompt_name,
+                            server_name=server_name,
+                            error=str(result),
+                            status="error"
+                        ))
+                    else:
+                        results.append(result)
+                        
+        except Exception as e:
+            # If parallel execution fails completely, create error results for all servers
+            for server_name in server_names:
+                if server_name in server_agent_map:
+                    results.append(ExecutorResult(
+                        prompt_name=prompt_name,
+                        server_name=server_name,
+                        error=f"Parallel execution failed: {str(e)}",
+                        status="error"
+                    ))
+        
+        return results
+    
+    async def _execute_single_agent(self, agent, agent_name: str, prompt: str, 
+                                   prompt_name: str, server_name: str) -> ExecutorResult:
+        """Execute prompt on a single agent"""
+        import time
+        
+        start_time = time.time()
+        
+        try:
+            # Get the specific agent and send the prompt
+            agent_instance = getattr(agent, agent_name)
+            response = await agent_instance.send(prompt)
+            
+            execution_time = time.time() - start_time
+            
+            return ExecutorResult(
+                prompt_name=prompt_name,
+                server_name=server_name,
+                content=str(response),
+                status="generated" if not self._is_mock_mode() else "mock",
+                execution_time=execution_time
+            )
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            return ExecutorResult(
+                prompt_name=prompt_name,
+                server_name=server_name,
+                error=str(e),
+                status="error",
+                execution_time=execution_time
+            )
+
+
+# Global executor instance
+_executor = None
+
+def get_executor() -> FastAgentExecutor:
+    """Get or create the global executor instance"""
+    global _executor
+    if _executor is None:
+        _executor = FastAgentExecutor()
+    return _executor
+
+
+async def execute_mcp_client(prompt: str, server_names: List[str], config: dict, 
+                           prompt_name: str = "custom_prompt", mock_mcp: Optional[bool] = None) -> List[ExecutorResult]:
+    """
+    Execute prompt across multiple servers/models in parallel using fast-agent
     
     Args:
         prompt: The prompt text to send to servers
         server_names: List of server names to execute against
-        config: Configuration dictionary containing MCP servers
+        config: Configuration dictionary (kept for compatibility, not used with fast-agent)
         prompt_name: Name identifier for the prompt (for logging/tracking)
         mock_mcp: Override mock setting (defaults to environment variable)
         
     Returns:
         List of ExecutorResult objects with results from each server
-        
-    Example:
-        >>> config = load_config()
-        >>> results = execute_mcp_client(
-        ...     prompt="Write a tweet about AI",
-        ...     server_names=["openai", "claude"],
-        ...     config=config,
-        ...     prompt_name="ai_tweet"
-        ... )
-        >>> for result in results:
-        ...     if result.content:
-        ...         print(f"{result.server_name}: {result.content}")
     """
-    if mock_mcp is None:
-        mock_mcp = os.getenv("MOCK_MCP", "false").lower() == "true"
+    # Override environment if specified
+    if mock_mcp is not None:
+        original_mock = os.environ.get("MOCK_MCP")
+        os.environ["MOCK_MCP"] = "true" if mock_mcp else "false"
     
-    mcp_servers = config.get('mcp', {}).get('servers', {})
-    results = []
-    
-    for server_name in server_names:
-        server_config = mcp_servers.get(server_name)
+    try:
+        executor = get_executor()
+        results = await executor.execute_parallel(prompt, server_names, prompt_name)
+        return results
         
-        if not server_config:
-            print(f"Warning: Server '{server_name}' not found in config, skipping")
-            results.append(ExecutorResult(
-                prompt_name=prompt_name,
-                server_name=server_name,
-                error=f"Server '{server_name}' not found in configuration",
-                status="error"
-            ))
-            continue
-            
-        try:
-            mcp_client = get_mcp_client(server_config, mock_mcp)
-            response = mcp_client.generate(prompt=prompt)
-            
-            results.append(ExecutorResult(
-                prompt_name=prompt_name,
-                server_name=server_name,
-                content=response,
-                status="generated" if not mock_mcp else "mock"
-            ))
-            
-        except Exception as e:
-            print(f"Error executing '{prompt_name}' on server '{server_name}': {str(e)}")
-            results.append(ExecutorResult(
-                prompt_name=prompt_name,
-                server_name=server_name,
-                error=str(e),
-                status="error"
-            ))
-    
-    return results
+    finally:
+        # Restore original mock setting
+        if mock_mcp is not None and original_mock is not None:
+            os.environ["MOCK_MCP"] = original_mock
+        elif mock_mcp is not None:
+            os.environ.pop("MOCK_MCP", None)
 
 
-def execute_single_server(prompt: str, server_name: str, config: dict, 
-                         prompt_name: str = "single_prompt", mock_mcp: Optional[bool] = None) -> ExecutorResult:
+async def execute_single_server(prompt: str, server_name: str, config: dict, 
+                               prompt_name: str = "single_prompt", mock_mcp: Optional[bool] = None) -> ExecutorResult:
     """
     Execute prompt on a single server (convenience function)
     
     Args:
         prompt: The prompt text to send
         server_name: Name of the server to use
-        config: Configuration dictionary
+        config: Configuration dictionary (for compatibility)
         prompt_name: Name identifier for the prompt
         mock_mcp: Override mock setting
         
     Returns:
         Single ExecutorResult object
     """
-    results = execute_mcp_client(prompt, [server_name], config, prompt_name, mock_mcp)
+    results = await execute_mcp_client(prompt, [server_name], config, prompt_name, mock_mcp)
     return results[0] if results else ExecutorResult(
         prompt_name=prompt_name,
         server_name=server_name,
@@ -144,30 +264,30 @@ def execute_single_server(prompt: str, server_name: str, config: dict,
     )
 
 
-def execute_with_fallback(prompt: str, server_names: List[str], config: dict, 
-                         prompt_name: str = "fallback_prompt", mock_mcp: Optional[bool] = None) -> ExecutorResult:
+async def execute_with_fallback(prompt: str, server_names: List[str], config: dict, 
+                              prompt_name: str = "fallback_prompt", mock_mcp: Optional[bool] = None) -> ExecutorResult:
     """
-    Execute prompt with fallback pattern - returns first successful result
+    Execute prompt with parallel execution then return first successful result
     
     Args:
         prompt: The prompt text to send
         server_names: List of server names in order of preference
-        config: Configuration dictionary
+        config: Configuration dictionary (for compatibility)
         prompt_name: Name identifier for the prompt
         mock_mcp: Override mock setting
         
     Returns:
         First successful ExecutorResult, or last error if all fail
     """
-    results = execute_mcp_client(prompt, server_names, config, prompt_name, mock_mcp)
+    results = await execute_mcp_client(prompt, server_names, config, prompt_name, mock_mcp)
     
     # Return first successful result
     for result in results:
         if result.content and result.status in ["generated", "mock"]:
             return result
     
-    # If all failed, return the last result (which should be an error)
-    return results[-1] if results else ExecutorResult(
+    # If all failed, return the first result (which should be an error)
+    return results[0] if results else ExecutorResult(
         prompt_name=prompt_name,
         server_name="unknown",
         error="No servers available",
@@ -201,3 +321,31 @@ def get_error_summary(results: List[ExecutorResult]) -> str:
     errors = [f"{result.server_name}: {result.error}" 
               for result in results if result.error]
     return "; ".join(errors) if errors else "No errors"
+
+
+def get_performance_summary(results: List[ExecutorResult]) -> Dict[str, float]:
+    """
+    Generate performance summary from executor results
+    
+    Args:
+        results: List of ExecutorResult objects
+        
+    Returns:
+        Dictionary with performance metrics
+    """
+    successful = get_successful_results(results)
+    if not successful:
+        return {"total_time": 0, "fastest": 0, "slowest": 0, "average": 0}
+    
+    times = [r.execution_time for r in successful if r.execution_time]
+    if not times:
+        return {"total_time": 0, "fastest": 0, "slowest": 0, "average": 0}
+    
+    return {
+        "total_time": max(times),  # Parallel execution time is the slowest
+        "fastest": min(times),
+        "slowest": max(times),
+        "average": sum(times) / len(times),
+        "successful_count": len(successful),
+        "total_count": len(results)
+    }
