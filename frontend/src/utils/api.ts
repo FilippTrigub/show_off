@@ -1,4 +1,4 @@
-import { ChatMessage } from '../types';
+// Removed unused ChatMessage import
 
 // API Configuration
 export const generationModel = "gemini-2.5-flash-preview-05-20";
