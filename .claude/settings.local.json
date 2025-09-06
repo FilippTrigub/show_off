@@ -10,7 +10,8 @@
       "mcp__github__get_file_contents",
       "mcp__github__search_code",
       "mcp__github__search_repositories",
-      "mcp__brave-search__brave_web_search"
+      "mcp__brave-search__brave_web_search",
+      "WebFetch(domain:newsletter.adaptiveengineer.com)"
     ],
     "deny": [],
     "ask": []

@@ -21,4 +21,6 @@ dependencies = [
     "mcp[cli]>=1.2.0",
     "tweepy>=4.16.0",
     "atproto>=0.0.62",
+    "mcp-agent>=0.1.17",
+    "openai>=1.106.1",
 ]
