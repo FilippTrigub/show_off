@@ -1,44 +1,63 @@
 # Fast-Agent Configuration for AI Content Publisher
 # This configuration defines MCP servers and model settings for parallel execution
 
+default_model: "deepseek/deepseek-chat-v3.1:free"
+execution_engine: "asyncio"
+
 mcp:
   servers:
+    # Blackbox AI MCP Server (Python)
     blackbox:
       command: "python"
-      args: ["../bbai_mcp_server/blackbox_mcp_server.py"]
+      args: ["servers/bbai_mcp_server/blackbox_mcp_server/server.py"]
       env:
         BLACKBOX_API_KEY: "${BLACKBOX_API_KEY}"
         
-    openai_server:
-      command: "mcp-server-openai"
-      args: []
+    # Bluesky MCP Server (TypeScript/Node.js)
+    bluesky:
+      command: "node"
+      args: ["servers/bsky-mcp-server/src/index.ts"]
       env:
-        OPENAI_API_KEY: "${OPENAI_API_KEY}"
+        BLUESKY_IDENTIFIER: "${BLUESKY_IDENTIFIER}"
+        BLUESKY_APP_PASSWORD: "${BLUESKY_APP_PASSWORD}"
+        BLUESKY_SERVICE_URL: "${BLUESKY_SERVICE_URL:-https://bsky.social}"
+        LOG_RESPONSES: "${LOG_RESPONSES:-false}"
         
-    claude_server:
-      command: "mcp-server-anthropic"
-      args: []
+    # LinkedIn MCP Server (Python)
+    linkedin:
+      command: "python" 
+      args: ["-m", "linkedin_mcp.server"]
+      cwd: "servers/linkedin-mcp"
       env:
-        ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+        LINKEDIN_CLIENT_ID: "${LINKEDIN_CLIENT_ID}"
+        LINKEDIN_CLIENT_SECRET: "${LINKEDIN_CLIENT_SECRET}"
+        LINKEDIN_REDIRECT_URI: "${LINKEDIN_REDIRECT_URI:-http://localhost:3000/callback}"
+        LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+        
+    # Twitter MCP Server (TypeScript/Node.js)  
+    twitter:
+      command: "node"
+      args: ["servers/twitter-mcp/src/index.ts"]
+      env:
+        API_KEY: "${TWITTER_API_KEY}"
+        API_SECRET_KEY: "${TWITTER_API_SECRET_KEY}" 
+        ACCESS_TOKEN: "${TWITTER_ACCESS_TOKEN}"
+        ACCESS_TOKEN_SECRET: "${TWITTER_ACCESS_TOKEN_SECRET}"
+
 
 # Model configurations for different AI providers
 models:
   # Direct model access (no MCP server required)
-  haiku:
-    provider: anthropic
-    model: claude-3-haiku-20240307
-    
-  sonnet:
-    provider: anthropic
-    model: claude-3-5-sonnet-20241022
-    
-  gpt4:
-    provider: openai
-    model: gpt-4o-mini
-    
-  gpt4o:
-    provider: openai
-    model: gpt-4o
+  blackbox:
+    provider: blackbox
+    api_key: "sk-dZJ1F6fEtui3_ur2iRsxCQ"
+    base_url: "https://api.blackbox.ai/v1"
+    model: "blackboxai/mistralai/mistral-small-3.1-24b-instruct:free"
+
+  openrouter:
+    provider: openrouter
+    api_key: "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"
+    model: "deepseek/deepseek-chat-v3.1:free"
 
 # Default settings
 defaults:

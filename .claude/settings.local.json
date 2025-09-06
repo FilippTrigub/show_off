@@ -5,7 +5,12 @@
       "WebFetch(domain:docs.blackbox.ai)",
       "Bash(mkdir:*)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:github.com)",
+      "mcp__github__get_file_contents",
+      "mcp__github__search_code",
+      "mcp__github__search_repositories",
+      "mcp__brave-search__brave_web_search"
     ],
     "deny": [],
     "ask": []
