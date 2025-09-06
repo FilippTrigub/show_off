@@ -3,7 +3,9 @@
     "allow": [
       "WebFetch(domain:gofastmcp.com)",
       "WebFetch(domain:docs.blackbox.ai)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []

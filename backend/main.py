@@ -14,9 +14,10 @@ app = FastAPI()
 
 class GenerateRequest(BaseModel):
     repository: str
-    event: str
     commit_sha: str
     branch: str
+    summary: str
+    timestamp: str  # ISO format
 
 def load_config():
     config_path = Path(__file__).parent.parent / "config.yml"
@@ -51,10 +52,21 @@ async def generate_content(request: GenerateRequest):
     # Load environment variables for secrets if not set in config
     mongodb_uri = os.getenv("MONGODB_URI") or config['mongodb']['uri']
     
-    # Initialize MongoDB client
+    # Initialize MongoDB client for storing commit summary
     mongo_client = get_mongodb_client(mongodb_uri)
     db = mongo_client['ai_content_publisher']
-    collection = db['contents']
+    summaries_collection = db['commit_summaries']
+    
+    # Store the commit summary with metadata
+    summary_doc = {
+        "repository": request.repository,
+        "commit_sha": request.commit_sha,
+        "branch": request.branch,
+        "summary": request.summary,
+        "timestamp": request.timestamp,
+        "created_at": request.timestamp
+    }
+    summary_result = summaries_collection.insert_one(summary_doc)
 
     # Load prompts from prompts.yml
     prompts = prompts_data.get('prompts', [])
@@ -88,33 +100,28 @@ async def generate_content(request: GenerateRequest):
             # Generate content using the specific server
             response = mcp_client.generate(prompt=prompt_content)
             
-            if not mock_mcp:
-                # Save generated content to MongoDB
-                content_doc = {
-                    "repository": request.repository,
-                    "event": request.event,
-                    "commit_sha": request.commit_sha,
-                    "branch": request.branch,
-                    "prompt_name": prompt_name,
-                    "prompt": prompt_content,
-                    "server_used": server_name,
-                    "content": response,
-                    "status": "pending_validation"
-                }
-                result = collection.insert_one(content_doc)
-                generated_contents.append({
-                    "prompt_name": prompt_name,
-                    "server_used": server_name,
-                    "content_id": str(result.inserted_id),
-                    "status": "saved"
-                })
-            else:
-                generated_contents.append({
-                    "prompt_name": prompt_name,
-                    "server_used": server_name,
-                    "content": response,
-                    "status": "mock"
-                })
+            # Prepare metadata for MongoDB MCP server storage
+            content_metadata = {
+                "repository": request.repository,
+                "commit_sha": request.commit_sha,
+                "branch": request.branch,
+                "summary": request.summary,
+                "timestamp": request.timestamp,
+                "prompt_name": prompt_name,
+                "prompt_content": prompt_content,
+                "server_used": server_name,
+                "content": response,
+                "status": "pending_validation",
+                "summary_id": str(summary_result.inserted_id)
+            }
+            
+            generated_contents.append({
+                "prompt_name": prompt_name,
+                "server_used": server_name,
+                "content": response,
+                "metadata": content_metadata,
+                "status": "generated" if not mock_mcp else "mock"
+            })
                 
         except Exception as e:
             print(f"Error processing prompt '{prompt_name}' with server '{server_name}': {str(e)}")
@@ -126,16 +133,18 @@ async def generate_content(request: GenerateRequest):
             })
             continue
     
-    if not mock_mcp:
-        return {
-            "message": f"Processed {len(generated_contents)} prompts with multiple servers.",
-            "results": generated_contents
-        }
-    else:
-        return {
-            "message": f"Processed {len(generated_contents)} prompts (mock mode).",
-            "results": generated_contents
-        }
+    return {
+        "message": f"Processed {len(generated_contents)} prompts with multiple servers.",
+        "summary_id": str(summary_result.inserted_id),
+        "commit_info": {
+            "repository": request.repository,
+            "commit_sha": request.commit_sha,
+            "branch": request.branch,
+            "summary": request.summary,
+            "timestamp": request.timestamp
+        },
+        "results": generated_contents
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

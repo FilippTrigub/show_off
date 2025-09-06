@@ -1,7 +1,7 @@
 [project]
-name = "bbai-mcp-client"
+name = "backend"
 version = "0.1.0"
-description = "MCP Client for AI Content Publisher"
+description = "FastAPI backend for AI Content Publisher with multiple MCP server support"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
