@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
+from pathlib import Path
 
 load_dotenv()
 
@@ -18,11 +19,13 @@ class GenerateRequest(BaseModel):
     branch: str
 
 def load_config():
-    with open("config.yml", "r") as f:
+    config_path = Path(__file__).parent.parent / "config.yml"
+    with open(str(config_path), "r") as f:
         return yaml.safe_load(f)
 
 def load_prompts():
-    with open("prompts.yml", "r") as f:
+    prompts_path = Path(__file__).parent / "prompts.yml"
+    with open(prompts_path, "r") as f:
         return yaml.safe_load(f)
 
 def get_mongodb_client(uri):
@@ -63,19 +66,21 @@ async def generate_content(request: GenerateRequest):
     # Call MCP server to generate content
     response = mcp_client.generate(prompt=selected_prompt)
 
-    # Save generated content to MongoDB
-    content_doc = {
-        "repository": request.repository,
-        "event": request.event,
-        "commit_sha": request.commit_sha,
-        "branch": request.branch,
-        "prompt": selected_prompt,
-        "content": response,
-        "status": "pending_validation"
-    }
-    collection.insert_one(content_doc)
-
-    return {"message": "Content generated and saved to MongoDB.", "content_id": str(content_doc["_id"])}
+    if not mock_mcp:
+        # Save generated content to MongoDB
+        content_doc = {
+            "repository": request.repository,
+            "event": request.event,
+            "commit_sha": request.commit_sha,
+            "branch": request.branch,
+            "prompt": selected_prompt,
+            "content": response,
+            "status": "pending_validation"
+        }
+        collection.insert_one(content_doc)
+        return {"message": "Content generated and saved to MongoDB.", "content_id": str(content_doc["_id"])}
+    else:
+        return {"message": "Content generated (mock mode).", "content": response}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
