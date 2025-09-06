@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
-from .blackbox_client import client, ChatMessage, ChatRequest
+from blackbox_client import client, ChatMessage, ChatRequest
 
 class ChatTools:
     @staticmethod

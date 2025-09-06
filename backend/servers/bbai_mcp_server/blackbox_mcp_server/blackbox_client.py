@@ -1,7 +1,7 @@
 import httpx
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
-from .config import config
+from config import config
 
 class ChatMessage(BaseModel):
     role: str

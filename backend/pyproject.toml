@@ -14,5 +14,9 @@ dependencies = [
     "pydantic>=2.0.0",
     "pytest>=7.0.0",
     "httpx>=0.25.0",
-    "asyncio>=3.4.3"
+    "asyncio>=3.4.3",
+    "fastmcp>=2.11.2",
+    "pydantic-settings>=2.10.1",
+    "python-jose[cryptography]>=3.3.0",
+    "mcp[cli]>=1.2.0",
 ]

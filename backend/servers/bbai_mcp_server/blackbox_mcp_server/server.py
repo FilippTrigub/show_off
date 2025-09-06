@@ -2,8 +2,8 @@ import asyncio
 import sys
 from typing import List, Dict, Any, Optional
 from fastmcp import FastMCP
-from .tools import ChatTools, ImageTools, ModelTools
-from .config import config
+from tools import ChatTools, ImageTools, ModelTools
+from config import config
 
 # Initialize the MCP server
 mcp = FastMCP(
