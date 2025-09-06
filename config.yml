@@ -1,0 +1,19 @@
+# Configuration for AI Content Publisher
+
+# GitHub events to trigger the action
+github_events:
+  - push
+  - pull_request
+  - release
+
+# MongoDB connection string
+mongodb:
+  uri: ${MONGODB_URI}
+
+# MCP server connection details
+mcp:
+  server_url: ${MCP_SERVER_URL}
+
+# AI API key (if needed for fallback or other AI calls)
+ai:
+  api_key: ${AI_API_KEY}
