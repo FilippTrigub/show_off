@@ -93,6 +93,25 @@ export const getContentById = async (contentId: string): Promise<ContentItem> =>
     return await response.json();
 };
 
+// Rephrase content via backend
+export const rephraseContent = async (contentId: string, tone?: number): Promise<string> => {
+    const response = await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/rephrase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tone })
+    });
+    const result = await response.json();
+    return result.content;
+};
+
+// Approve content and post to social media
+export const approveAndPost = async (contentId: string): Promise<void> => {
+    await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    });
+};
+
 // Mock data for when backend is not available
 export const getMockContentItems = (): ContentItem[] => [
     {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './styles/index.css';
-import { getContentItems, updateContentStatus, updateContentText, testBackendConnection, ContentItem } from './utils/backendApi';
+import { getContentItems, updateContentStatus, updateContentText, testBackendConnection, rephraseContent, approveAndPost, ContentItem } from './utils/backendApi';
 
 // TypeScript interfaces
 interface Author {
@@ -135,14 +135,14 @@ const App: React.FC = () => {
     const handleApprove = async (id: string) => {
         try {
             if (backendConnected) {
-                await updateContentStatus(id, 'approved');
+                await approveAndPost(id);
             }
-            const updatedPosts = posts.map(p => p.id === id ? { ...p, status: 'approved' as const } : p);
+            const updatedPosts = posts.map(p => p.id === id ? { ...p, status: 'posted' as const } : p);
             setPosts(updatedPosts);
-            showNotification(`Post for ${posts.find(p => p.id === id)?.platform} Approved! ✅`);
+            showNotification(`Post for ${posts.find(p => p.id === id)?.platform} Approved & Posted! ✅`);
         } catch (error) {
-            console.error('Error approving post:', error);
-            showNotification('Failed to approve post');
+            console.error('Error approving and posting:', error);
+            showNotification('Failed to approve and post content');
         }
     };
 
@@ -190,15 +190,21 @@ const App: React.FC = () => {
         setPosts(prevPosts => prevPosts.map(p => p.id === id ? { ...p, content: 'Rephrasing with AI... ✨' } : p));
 
         try {
-            const { rephraseWithMCP } = await import('./utils/mcpApi');
-            const newContent = await rephraseWithMCP(originalContent, tone);
-            setPosts(prevPosts => prevPosts.map(p => p.id === id ? { ...p, content: newContent } : p));
-            
             if (backendConnected) {
-                await updateContentText(id, newContent);
+                const newContent = await rephraseContent(id, tone);
+                setPosts(prevPosts => prevPosts.map(p => p.id === id ? { ...p, content: newContent } : p));
+                showNotification("Post rephrased successfully! ✨");
+            } else {
+                // Fallback to direct MCP call if backend not available
+                const { rephraseWithMCP } = await import('./utils/mcpApi');
+                const newContent = await rephraseWithMCP(originalContent, tone);
+                setPosts(prevPosts => prevPosts.map(p => p.id === id ? { ...p, content: newContent } : p));
+                
+                if (backendConnected) {
+                    await updateContentText(id, newContent);
+                }
+                showNotification("Post rephrased successfully! ✨");
             }
-            
-            showNotification("Post rephrased successfully! ✨");
         } catch (error) {
             console.error('Error rephrasing post:', error);
             setPosts(prevPosts => prevPosts.map(p => p.id === id ? { ...p, content: originalContent } : p));
