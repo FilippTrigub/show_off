@@ -19,4 +19,6 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "python-jose[cryptography]>=3.3.0",
     "mcp[cli]>=1.2.0",
+    "tweepy>=4.16.0",
+    "atproto>=0.0.62",
 ]

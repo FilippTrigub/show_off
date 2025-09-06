@@ -1,0 +1,13 @@
+# Update Bluesky server in fastagent.config.yaml
+
+# Find the 'bluesky' section in the mcp/servers configuration
+# and replace it with:
+
+bluesky:
+  command: "python"
+  args: ["servers/bluesky-mcp-python/run.py"]
+  env:
+    BLUESKY_IDENTIFIER: "${BLUESKY_IDENTIFIER}"
+    BLUESKY_APP_PASSWORD: "${BLUESKY_APP_PASSWORD}"
+    BLUESKY_SERVICE_URL: "${BLUESKY_SERVICE_URL:-https://bsky.social}"
+    LOG_RESPONSES: "${LOG_RESPONSES:-false}"

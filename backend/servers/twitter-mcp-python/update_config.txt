@@ -1,0 +1,13 @@
+# Update Twitter server in fastagent.config.yaml
+
+# Find the 'twitter' section in the mcp/servers configuration
+# and replace it with:
+
+twitter:
+  command: "python"
+  args: ["servers/twitter-mcp-python/run.py"]
+  env:
+    TWITTER_API_KEY: "${TWITTER_API_KEY}"
+    TWITTER_API_SECRET_KEY: "${TWITTER_API_SECRET_KEY}"
+    TWITTER_ACCESS_TOKEN: "${TWITTER_ACCESS_TOKEN}"
+    TWITTER_ACCESS_TOKEN_SECRET: "${TWITTER_ACCESS_TOKEN_SECRET}"

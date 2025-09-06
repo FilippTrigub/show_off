@@ -15,8 +15,8 @@ mcp:
         
     # Bluesky MCP Server (TypeScript/Node.js)
     bluesky:
-      command: "node"
-      args: ["servers/bsky-mcp-server/src/index.ts"]
+      command: "python"
+      args: ["servers/bluesky-mcp-python/server.py"]
       env:
         BLUESKY_IDENTIFIER: "${BLUESKY_IDENTIFIER}"
         BLUESKY_APP_PASSWORD: "${BLUESKY_APP_PASSWORD}"
@@ -36,8 +36,8 @@ mcp:
         
     # Twitter MCP Server (TypeScript/Node.js)  
     twitter:
-      command: "node"
-      args: ["servers/twitter-mcp/src/index.ts"]
+      command: "python"
+      args: ["servers/twitter-mcp-python/server.py"]
       env:
         API_KEY: "${TWITTER_API_KEY}"
         API_SECRET_KEY: "${TWITTER_API_SECRET_KEY}" 
