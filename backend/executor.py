@@ -6,10 +6,15 @@ with proper concurrent processing and result standardization.
 """
 import asyncio
 import subprocess
+import os
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
 from pathlib import Path
 from fastmcp import Client
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(Path(__file__).parent / '.env')
 
 
 @dataclass
@@ -128,17 +133,8 @@ class FastMCPExecutor:
             # Create client with STDIO transport that manages the server process
             from fastmcp.client.transports import StdioTransport
             
-            # Build environment variables from config
+            # Use all current environment variables (which now includes .env values)
             env = dict(os.environ)
-            for key, value in server_config["env"].items():
-                # Simple environment variable substitution
-                if value.startswith("${") and value.endswith("}"):
-                    env_var = value[2:-1].split(":-")
-                    env_key = env_var[0]
-                    default_val = env_var[1] if len(env_var) > 1 else ""
-                    env[key] = os.getenv(env_key, default_val)
-                else:
-                    env[key] = value
             
             # Get the script path
             script_path = Path(__file__).parent / server_config["script"]

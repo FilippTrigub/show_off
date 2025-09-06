@@ -15,6 +15,10 @@ from fastmcp import Client
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(Path(__file__).parent / '.env')
 
 # Create rich console for nice formatting
 console = Console()
@@ -29,34 +33,19 @@ class FastMCPCLI:
         self._server_config = {
             "blackbox": {
                 "script": "servers/bbai_mcp_server/blackbox_mcp_server/server.py",
-                "env": {"BLACKBOX_API_KEY": os.getenv("BLACKBOX_API_KEY", "")}
+                "env": dict(os.environ)  # Pass all current environment variables
             },
             # "bluesky": {
             #     "script": "servers/bluesky-mcp-python/server.py",
-            #     "env": {
-            #         "BLUESKY_IDENTIFIER": os.getenv("BLUESKY_IDENTIFIER", ""),
-            #         "BLUESKY_APP_PASSWORD": os.getenv("BLUESKY_APP_PASSWORD", ""),
-            #         "BLUESKY_SERVICE_URL": os.getenv("BLUESKY_SERVICE_URL", "https://bsky.social"),
-            #         "LOG_RESPONSES": os.getenv("LOG_RESPONSES", "false")
-            #     }
+            #     "env": dict(os.environ)
             # },
             # "linkedin": {
             #     "script": "servers/linkedin-mcp/linkedin_mcp/server.py",
-            #     "env": {
-            #         "LINKEDIN_CLIENT_ID": os.getenv("LINKEDIN_CLIENT_ID", ""),
-            #         "LINKEDIN_CLIENT_SECRET": os.getenv("LINKEDIN_CLIENT_SECRET", ""),
-            #         "LINKEDIN_REDIRECT_URI": os.getenv("LINKEDIN_REDIRECT_URI", "http://localhost:3000/callback"),
-            #         "LOG_LEVEL": os.getenv("LOG_LEVEL", "INFO")
-            #     }
+            #     "env": dict(os.environ)
             # },
             # "twitter": {
             #     "script": "servers/twitter-mcp-python/server.py",
-            #     "env": {
-            #         "TWITTER_API_KEY": os.getenv("TWITTER_API_KEY", ""),
-            #         "TWITTER_API_SECRET_KEY": os.getenv("TWITTER_API_SECRET_KEY", ""),
-            #         "TWITTER_ACCESS_TOKEN": os.getenv("TWITTER_ACCESS_TOKEN", ""),
-            #         "TWITTER_ACCESS_TOKEN_SECRET": os.getenv("TWITTER_ACCESS_TOKEN_SECRET", "")
-            #     }
+            #     "env": dict(os.environ)
             # }
         }
     
@@ -115,11 +104,11 @@ class FastMCPCLI:
             # Get the script path
             script_path = Path(__file__).parent / server_config["script"]
             
-            # Create STDIO transport that will manage the server process
+            # Create STDIO transport that will manage the server process  
             transport = StdioTransport(
                 command="uv",
                 args=["run", "python", str(script_path)],
-                env=server_config["env"],
+                env=server_config["env"],  # Pass all environment variables
                 cwd=str(Path(__file__).parent)
             )
             
