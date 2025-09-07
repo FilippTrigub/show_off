@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
-from pathlib import Path
 from bson import ObjectId
 from executor import execute_mcp_client, execute_with_fallback, get_error_summary, get_performance_summary, \
     validate_server_by_platform
@@ -81,12 +80,6 @@ class ContentResponse(BaseModel):
     message: str
 
 
-def load_config():
-    config_path = "config.yml"
-    with open(str(config_path), "r") as f:
-        return yaml.safe_load(f)
-
-
 def load_prompts():
     prompts_path = "prompts.yml"
     with open(prompts_path, "r") as f:
@@ -99,11 +92,9 @@ def get_mongodb_client(uri):
 
 @app.post("/generate-content")
 async def generate_content(request: GenerateRequest):
-    config = load_config()
     prompts_data = load_prompts()
 
-    # Load environment variables for secrets if not set in config
-    mongodb_uri = os.getenv("MONGODB_URI") or config['mongodb']['uri']
+    mongodb_uri = os.getenv("MONGODB_URI")
 
     # Initialize MongoDB client for storing commit summary
     mongo_client = get_mongodb_client(mongodb_uri)
@@ -126,11 +117,6 @@ async def generate_content(request: GenerateRequest):
     if not prompts:
         raise HTTPException(status_code=400, detail="No prompts found in prompts.yml")
 
-    # Validate MCP server configuration
-    mcp_servers = config.get('mcp', {}).get('servers', {})
-    if not mcp_servers:
-        raise HTTPException(status_code=400, detail="No MCP servers configured in config.yml")
-
     generated_contents = []
 
     # Process each prompt with its designated server using the executor
@@ -143,7 +129,6 @@ async def generate_content(request: GenerateRequest):
         executor_results = await execute_mcp_client(
             prompt=prompt_content,
             server_names=[server_name, 'mongodb'],
-            config=config,
             prompt_name=prompt_name
         )
 
@@ -197,8 +182,6 @@ async def generate_content(request: GenerateRequest):
 async def rephrase_content(content_id: str, request: RephraseRequest):
     """Rephrase content with given instructions using BlackBox MCP server through executor"""
 
-    config = load_config()
-
     # Fetch original content from MongoDB using content_id
     try:
         content_item = await content_controller.get_by_id(content_id, raise_if_none=True)
@@ -230,7 +213,6 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
         executor_results = await execute_mcp_client(
             prompt=rephrase_prompt,
             server_names=["blackbox"],
-            config=config,
             prompt_name="rephrase_content_blackbox"
         )
 
@@ -260,7 +242,6 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
         fallback_result = await execute_with_fallback(
             prompt=rephrase_prompt,
             server_names=["openai", "claude"],
-            config=config,
             prompt_name="rephrase_content_fallback"
         )
 
@@ -295,14 +276,6 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
 async def approve_and_post_content(content_id: str):
     """Approve content and post to social media using MCP client executor"""
 
-    config = load_config()
-
-    # Implementation completed:
-    # 1. ✅ Fetch content from MongoDB using content_id
-    # 2. ✅ Update status to "approved" in MongoDB  
-    # 3. ✅ Use social media MCP servers to post content
-    # 4. ✅ Update status to "posted"
-
     content = await content_controller.get_by_id(content_id)
 
     server_valid = validate_server_by_platform(content.platform)
@@ -321,13 +294,13 @@ async def approve_and_post_content(content_id: str):
     # Use platform-specific MCP servers for actual social media posting
     platform_server_map = {
         "linkedin": "linkedin",
-        "twitter": "twitter", 
+        "twitter": "twitter",
         "x": "twitter",  # Twitter/X mapping
         "bluesky": "bluesky"
     }
-    
+
     target_server = platform_server_map.get(content.platform.lower(), "blackbox")
-    
+
     try:
         # First generate optimized content using BlackBox
         content_generation_prompt = f"""
@@ -337,56 +310,53 @@ async def approve_and_post_content(content_id: str):
         
         Create a {content.platform}-appropriate version that maintains the core message while following platform best practices for engagement, character limits, and formatting.
         """
-        
+
         generation_results = await execute_mcp_client(
             prompt=content_generation_prompt,
             server_names=["blackbox"],
-            config=config,
             prompt_name="optimize_content_for_platform"
         )
-        
+
         optimized_content = content.content  # fallback
         for result in generation_results:
             if result.content and result.status in ["generated", "mock"]:
                 optimized_content = result.content.strip()
                 break
-        
+
         # Now actually post using platform-specific server
         if target_server != "blackbox":
             posting_results = await execute_mcp_client(
                 prompt=f"Post this content to {content.platform}: {optimized_content}",
                 server_names=[target_server],
-                config=config,
                 prompt_name="actual_platform_post"
             )
-            
+
             # Check if actual posting succeeded
             for result in posting_results:
                 if result.content and result.status in ["generated", "posted", "success"]:
                     # Update content status to "posted" in MongoDB
                     await content_controller.update_by_id(content_id, {"status": "posted"})
-                    
+
                     return ContentResponse(
                         id=content_id,
                         content=f"✅ ACTUALLY POSTED to {content.platform}: {optimized_content}",
                         status="posted",
                         message=f"Content successfully posted to {content.platform}!"
                     )
-        
+
         # Fallback to BlackBox simulation if platform server fails
         executor_results = await execute_mcp_client(
             prompt=posting_prompt,
             server_names=["blackbox"],  # Use working BlackBox server instead of platform-specific ones
-            config=config,
             prompt_name="approve_and_post"
         )
     except Exception as platform_error:
         # If BlackBox server fails, simulate posting for development
         print(f"BlackBox server not available, simulating post: {platform_error}")
-        
+
         # Update content status to "posted" in MongoDB
         await content_controller.update_by_id(content_id, {"status": "posted"})
-        
+
         return ContentResponse(
             id=content_id,
             content=f"✅ SIMULATED POST to {content.platform}: Content approved and would be posted to {content.platform}",

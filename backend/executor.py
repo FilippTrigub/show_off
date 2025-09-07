@@ -249,7 +249,7 @@ def get_executor() -> MCPAgentExecutor:
 
 async def execute_mcp_client(
         prompt: str,
-        server_names: List[str], config: dict,
+        server_names: List[str],
         prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
     """
     Execute prompt across multiple servers using MCP agent
@@ -272,7 +272,7 @@ async def execute_mcp_client(
         await executor.cleanup()
 
 
-async def execute_single_server(prompt: str, server_name: str, config: dict,
+async def execute_single_server(prompt: str, server_name: str,
                                 prompt_name: str = "single_prompt") -> ExecutorResult:
     """
     Execute prompt on a single server (convenience function)
@@ -286,7 +286,7 @@ async def execute_single_server(prompt: str, server_name: str, config: dict,
     Returns:
         Single ExecutorResult object
     """
-    results = await execute_mcp_client(prompt, [server_name], config, prompt_name)
+    results = await execute_mcp_client(prompt, [server_name], prompt_name)
     return results[0] if results else ExecutorResult(
         prompt_name=prompt_name,
         server_name=server_name,
@@ -295,7 +295,7 @@ async def execute_single_server(prompt: str, server_name: str, config: dict,
     )
 
 
-async def execute_with_fallback(prompt: str, server_names: List[str], config: dict,
+async def execute_with_fallback(prompt: str, server_names: List[str],
                                 prompt_name: str = "fallback_prompt") -> ExecutorResult:
     """
     Execute prompt with parallel execution then return first successful result
@@ -309,7 +309,7 @@ async def execute_with_fallback(prompt: str, server_names: List[str], config: di
     Returns:
         First successful ExecutorResult, or last error if all fail
     """
-    results = await execute_mcp_client(prompt, server_names, config, prompt_name)
+    results = await execute_mcp_client(prompt, server_names, prompt_name)
 
     # Return first successful result
     for result in results:
