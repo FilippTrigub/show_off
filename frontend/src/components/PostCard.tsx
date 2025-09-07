@@ -1,8 +1,10 @@
 import React from 'react';
-import { Post } from '../types';
+import { Post } from '../types/shared';
 
 interface PostCardProps {
     post: Post;
+    index: number;
+    isLoading: boolean;
     onApprove: (id: string) => void;
     onDisapprove: (id: string) => void;
     onRephrase: (id: string) => void;
@@ -12,79 +14,168 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({
     post,
+    index,
+    isLoading,
     onApprove,
     onDisapprove,
     onRephrase,
     onReadAloud,
     onContentChange
 }) => {
-    // Renders the media content based on post data
-    const renderMedia = (post: Post) => {
-        if (post.mediaType === 'image') {
-            return <img src={post.mediaUrl} alt="Post Media" className="w-full h-auto object-cover" />;
-        } else if (post.mediaType === 'video') {
-            return <video src={post.mediaUrl} className="w-full h-auto object-cover" controls autoPlay muted loop></video>;
+    const getPlatformGradient = (platform: string) => {
+        switch (platform) {
+            case 'LinkedIn': return 'from-blue-500 to-blue-700';
+            case 'X': return 'from-gray-800 to-black';
+            case 'Email': return 'from-green-500 to-green-700';
+            case 'TikTok': return 'from-pink-500 to-red-500';
+            default: return 'from-purple-500 to-purple-700';
         }
-        return <div className="bg-gray-200 h-48 flex items-center justify-center text-gray-400 font-medium">No Media</div>;
+    };
+
+    const renderMedia = (post: Post) => {
+        if (post.media.length === 0) {
+            return (
+                <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center">
+                    <div className="text-gray-400 text-center">
+                        <div className="text-4xl mb-2">📄</div>
+                        <div className="font-medium">No Media</div>
+                    </div>
+                </div>
+            );
+        }
+
+        if (post.media.length === 1) {
+            const media = post.media[0];
+            return (
+                <div className="relative">
+                    {media.type === 'image' ? (
+                        <img src={media.url} alt={media.caption || "Post Media"} className="w-full h-48 object-cover rounded-2xl" />
+                    ) : (
+                        <video src={media.url} className="w-full h-48 object-cover rounded-2xl" controls muted loop></video>
+                    )}
+                    {media.caption && (
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-lg">
+                            {media.caption}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Multiple media items - show as carousel/grid
+        return (
+            <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                    {post.media.slice(0, 4).map((media, index) => (
+                        <div key={index} className="relative">
+                            {media.type === 'image' ? (
+                                <img src={media.url} alt={media.caption || `Media ${index + 1}`} className="w-full h-24 object-cover rounded-xl" />
+                            ) : (
+                                <video src={media.url} className="w-full h-24 object-cover rounded-xl" muted></video>
+                            )}
+                            {media.caption && (
+                                <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
+                                    {media.caption}
+                                </div>
+                            )}
+                            {index === 3 && post.media.length > 4 && (
+                                <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center text-white font-bold">
+                                    +{post.media.length - 4}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                <div className="text-xs text-white/70 text-center">
+                    {post.media.length} media items from database
+                </div>
+            </div>
+        );
     };
 
     return (
-        <div
-            className={`post-card-container bg-white p-6 rounded-2xl shadow-md transition-all ease-in-out duration-300 transform ${post.status === 'approved' ? 'border-4 border-green-500' : post.status === 'disapproved' ? 'border-4 border-red-500 opacity-70' : ''}`}
+        <div 
+            className="post-card-container rounded-3xl p-8 transform transition-all duration-500"
+            style={{ animationDelay: `${index * 0.1}s` }}
         >
-            <h3 className="text-xl font-bold mb-4 text-gray-700">{post.platform} Post</h3>
-            <div className="flex items-center mb-4">
-                <img src={post.author.avatar} alt={`${post.author.name}'s Avatar`} className="h-10 w-10 rounded-full mr-2" />
-                <span className="font-bold text-gray-800">{post.author.name}</span>
+            {/* Platform Header */}
+            <div className={`bg-gradient-to-r ${getPlatformGradient(post.platform)} rounded-2xl p-4 mb-6 text-white`}>
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold">{post.platform}</h3>
+                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        post.status === 'approved' ? 'bg-green-500' :
+                        post.status === 'disapproved' ? 'bg-red-500' :
+                        'bg-yellow-500'
+                    }`}>
+                        {post.status.toUpperCase()}
+                    </div>
+                </div>
+                <div className="flex items-center mt-2">
+                    <img src={post.author.avatar} alt={post.author.name} className="h-8 w-8 rounded-full mr-3" />
+                    <div>
+                        <div className="font-semibold text-sm">{post.author.name}</div>
+                        {post.author.title && <div className="text-xs opacity-75">{post.author.title}</div>}
+                    </div>
+                </div>
+                {/* Repository Info */}
+                {post.repository && (
+                    <div className="mt-2 text-xs opacity-75">
+                        📦 {post.repository} • {post.branch} • {post.commit_sha?.slice(0, 7)}
+                    </div>
+                )}
             </div>
 
-            {/* Media Section */}
-            <div className="rounded-xl overflow-hidden mb-4">
+            {/* Media from Database */}
+            <div className="mb-6">
                 {renderMedia(post)}
             </div>
 
+            {/* Content */}
             <textarea
                 value={post.content}
                 onChange={(e) => onContentChange(e, post.id)}
                 disabled={post.status !== 'pending'}
-                className={`w-full h-40 rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors`}
+                className="w-full h-32 rounded-2xl border-0 bg-white/20 backdrop-blur-lg p-4 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all resize-none"
+                placeholder="AI-generated content..."
             />
 
-            {/* LLM-powered Action Buttons */}
-            <div className="mt-4 flex gap-2">
+            {/* AI Actions */}
+            <div className="mt-6 flex gap-3">
                 <button
                     onClick={() => onRephrase(post.id)}
-                    disabled={post.status !== 'pending'}
-                    className="flex items-center justify-center px-4 py-2 rounded-full text-blue-600 font-medium bg-blue-100 hover:bg-blue-200 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={post.status !== 'pending' || isLoading}
+                    className="modern-button flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold py-3 px-4 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Rephrase ✨
+                    {isLoading ? (
+                        <div className="loading-spinner mx-auto"></div>
+                    ) : (
+                        <>✨ Rephrase</>
+                    )}
                 </button>
                 <button
                     onClick={() => onReadAloud(post.id)}
-                    disabled={post.platform === 'TikTok' || post.status !== 'pending'}
-                    className="flex items-center justify-center px-4 py-2 rounded-full text-purple-600 font-medium bg-purple-100 hover:bg-purple-200 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={post.status !== 'pending'}
+                    className="modern-button bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 px-6 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Read Aloud 🎧
+                    🎧
                 </button>
             </div>
 
-            {/* Approval Action Buttons */}
-            <div className="mt-6 flex gap-4">
+            {/* Approval Actions */}
+            <div className="mt-4 flex gap-3">
                 <button
                     onClick={() => onApprove(post.id)}
                     disabled={post.status !== 'pending'}
-                    className="flex items-center justify-center px-4 py-2 rounded-full text-white font-medium bg-green-500 hover:bg-green-600 transition-colors shadow-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="modern-button flex-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                    Approve
+                    ✅ Approve
                 </button>
                 <button
                     onClick={() => onDisapprove(post.id)}
                     disabled={post.status !== 'pending'}
-                    className="flex items-center justify-center px-4 py-2 rounded-full text-white font-medium bg-red-500 hover:bg-red-600 transition-colors shadow-md w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="modern-button flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold py-3 px-4 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-                    Disapprove
+                    ❌ Reject
                 </button>
             </div>
         </div>
