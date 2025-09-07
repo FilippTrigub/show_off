@@ -317,39 +317,41 @@ async def approve_and_post_content(content_id: str):
             prompt_name="optimize_content_for_platform"
         )
 
-        optimized_content = content.content  # fallback
+        optimized_content = content.content
         for result in generation_results:
-            if result.content and result.status in ["generated", "mock"]:
+            if result.content and result.status in ["generated"]:
                 optimized_content = result.content.strip()
                 break
 
         # Now actually post using platform-specific server
-        if target_server != "blackbox":
-            posting_results = await execute_mcp_client(
-                prompt=f"Post this content to {content.platform}: {optimized_content}",
-                server_names=[target_server],
-                prompt_name="actual_platform_post"
+        posting_results = await execute_mcp_client(
+            prompt=f"Post this content to {content.platform}: {optimized_content}",
+            server_names=[target_server],
+            prompt_name="actual_platform_post"
+        )
+
+        # Check if actual posting succeeded
+        result = posting_results[0]
+        if result.content and result.status in ["generated", "posted", "success"]:
+            # Update content status to "posted" in MongoDB
+            await content_controller.update_by_id(content_id, {"status": "posted"})
+
+            return ContentResponse(
+                id=content_id,
+                content=f"✅ ACTUALLY POSTED to {content.platform}: {optimized_content}",
+                status="posted",
+                message=f"Content successfully posted to {content.platform}!"
             )
 
-            # Check if actual posting succeeded
-            for result in posting_results:
-                if result.content and result.status in ["generated", "posted", "success"]:
-                    # Update content status to "posted" in MongoDB
-                    await content_controller.update_by_id(content_id, {"status": "posted"})
+        else:
+            return ContentResponse(
+                id=content_id,
+                content=f"NOT POSTED",
+                status="error",
+                message=f"Content not posted to {content.platform}!"
+            )
 
-                    return ContentResponse(
-                        id=content_id,
-                        content=f"✅ ACTUALLY POSTED to {content.platform}: {optimized_content}",
-                        status="posted",
-                        message=f"Content successfully posted to {content.platform}!"
-                    )
 
-        # Fallback to BlackBox simulation if platform server fails
-        executor_results = await execute_mcp_client(
-            prompt=posting_prompt,
-            server_names=["blackbox"],  # Use working BlackBox server instead of platform-specific ones
-            prompt_name="approve_and_post"
-        )
     except Exception as platform_error:
         # If BlackBox server fails, simulate posting for development
         print(f"BlackBox server not available, simulating post: {platform_error}")
@@ -363,27 +365,6 @@ async def approve_and_post_content(content_id: str):
             status="posted",
             message=f"Content approved! (Simulated posting to {content.platform} - real credentials needed for actual posting)"
         )
-
-    # Process posting results
-    successful_posts = []
-    for result in executor_results:
-        if result.content and result.status in ["generated", "mock"]:
-            successful_posts.append(f"{result.server_name}: {result.content}")
-
-    if successful_posts:
-        # Update content status to "posted" in MongoDB
-        await content_controller.update_by_id(content_id, {"status": "posted"})
-
-        return ContentResponse(
-            id=content_id,
-            content=f"✅ POSTED: {'; '.join(successful_posts)}",
-            status="posted",
-            message="Approved & Posted!"
-        )
-    else:
-        # If posting failed, return error but keep content as approved
-        error_summary = get_error_summary(executor_results)
-        raise HTTPException(status_code=500, detail=f"Failed to post content: {error_summary}")
 
 
 @app.get("/content")
