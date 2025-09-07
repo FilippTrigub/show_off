@@ -1,20 +1,30 @@
 """
-FastMCP Executor Module
+MCP Agent Executor Module
 
-This module provides parallel execution of AI models/MCP servers using FastMCP
+This module provides parallel execution of AI models/MCP servers using mcp-agent
 with proper concurrent processing and result standardization.
 """
 import asyncio
-import subprocess
 import os
 from typing import List, Dict, Optional, Union
 from dataclasses import dataclass
 from pathlib import Path
-from fastmcp import Client
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv(Path(__file__).parent / '.env')
+
+# Import mcp-agent components (following llm_agent.py pattern)
+from mcp_agent.app import MCPApp
+from mcp_agent.config import (
+    Settings,
+    LoggerSettings,
+    MCPSettings,
+    MCPServerSettings,
+    OpenAISettings,
+)
+from mcp_agent.agents.agent import Agent
+from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
 
 @dataclass
@@ -31,141 +41,111 @@ class ExecutorResult:
         return f"ExecutorResult(prompt='{self.prompt_name}', server='{self.server_name}', status='{self.status}')"
 
 
-class FastMCPExecutor:
+class MCPAgentExecutor:
     """
-    Parallel executor using FastMCP for concurrent AI model execution
+    MCP Agent Executor using mcp-agent library for LLM-powered execution
     """
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, 
+                 api_key: Optional[str] = None,
+                 model: str = "blackboxai/google/gemini-2.5-pro",
+                 base_url: str = "https://api.blackbox.ai/v1"):
         """
-        Initialize the FastMCP executor
+        Initialize the MCP Agent executor
         
         Args:
-            config_path: Path to config (defaults to current directory)
+            api_key: BlackboxAI API key (or use BLACKBOX_API_KEY env var)
+            model: BlackboxAI model to use
+            base_url: BlackboxAI API base URL
         """
-        self.config_path = config_path
-        self.server_processes = {}
-        self.clients = {}
+        self.api_key = api_key or os.getenv("BLACKBOX_API_KEY")
+        if not self.api_key:
+            raise ValueError("BlackboxAI API key is required. Set BLACKBOX_API_KEY environment variable.")
+
+        self.model = model
+        self.base_url = base_url
+        self.app = None
+        
+        # Available MCP servers configuration
         self._server_config = {
             "blackbox": {
-                "script": "servers/bbai_mcp_server/blackbox_mcp_server/server.py",
-                "env": {"BLACKBOX_API_KEY": "${BLACKBOX_API_KEY}"}
+                "command": "uv",
+                "args": ["run", "python", "servers/bbai_mcp_server/blackbox_mcp_server/server.py"],
+                "cwd": str(Path(__file__).parent),
+                "env": dict(os.environ)
             },
             "bluesky": {
-                "script": "servers/bluesky-mcp-python/server.py",
-                "env": {
-                    "BLUESKY_IDENTIFIER": "${BLUESKY_IDENTIFIER}",
-                    "BLUESKY_APP_PASSWORD": "${BLUESKY_APP_PASSWORD}",
-                    "BLUESKY_SERVICE_URL": "${BLUESKY_SERVICE_URL:-https://bsky.social}",
-                    "LOG_RESPONSES": "${LOG_RESPONSES:-false}"
-                }
+                "command": "uv", 
+                "args": ["run", "python", "servers/bluesky-mcp-python/server.py"],
+                "cwd": str(Path(__file__).parent),
+                "env": dict(os.environ)
             },
             "linkedin": {
-                "script": "servers/linkedin-mcp/linkedin_mcp/server.py",
-                "env": {
-                    "LINKEDIN_CLIENT_ID": "${LINKEDIN_CLIENT_ID}",
-                    "LINKEDIN_CLIENT_SECRET": "${LINKEDIN_CLIENT_SECRET}",
-                    "LINKEDIN_REDIRECT_URI": "${LINKEDIN_REDIRECT_URI:-http://localhost:3000/callback}",
-                    "LOG_LEVEL": "${LOG_LEVEL:-INFO}"
-                }
+                "command": "uv",
+                "args": ["run", "python", "servers/linkedin-mcp/linkedin_mcp/server.py"],
+                "cwd": str(Path(__file__).parent),
+                "env": dict(os.environ)
             },
             "twitter": {
-                "script": "servers/twitter-mcp-python/server.py",
-                "env": {
-                    "TWITTER_API_KEY": "${TWITTER_API_KEY}",
-                    "TWITTER_API_SECRET_KEY": "${TWITTER_API_SECRET_KEY}",
-                    "TWITTER_ACCESS_TOKEN": "${TWITTER_ACCESS_TOKEN}",
-                    "TWITTER_ACCESS_TOKEN_SECRET": "${TWITTER_ACCESS_TOKEN_SECRET}"
-                }
+                "command": "uv",
+                "args": ["run", "python", "servers/twitter-mcp-python/server.py"],
+                "cwd": str(Path(__file__).parent),
+                "env": dict(os.environ)
             }
         }
-    
-    async def _start_server(self, server_name: str) -> bool:
-        """Start a single MCP server process"""
-        if server_name in self.server_processes:
-            return True
-            
-        server_config = self._server_config.get(server_name)
-        if not server_config:
-            return False
-            
-        try:
-            # Build environment variables from config
-            env = dict(os.environ)
-            for key, value in server_config["env"].items():
-                # Simple environment variable substitution
-                if value.startswith("${") and value.endswith("}"):
-                    env_var = value[2:-1].split(":-")
-                    env_key = env_var[0]
-                    default_val = env_var[1] if len(env_var) > 1 else ""
-                    env[key] = os.getenv(env_key, default_val)
-                else:
-                    env[key] = value
-            
-            # Start the server process
-            script_path = Path(__file__).parent / server_config["script"]
-            process = await asyncio.create_subprocess_exec(
-                "uv run python", str(script_path),
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env
+        self._setup_mcp_app()
+        
+    def _setup_mcp_app(self):
+        """Setup MCP application with server configurations using Settings"""
+        # Build server configurations based on requested servers
+        mcp_servers = {}
+        for server_name, config in self._server_config.items():
+            mcp_servers[server_name] = MCPServerSettings(
+                command=config["command"],
+                args=config["args"],
+                cwd=config["cwd"],
+                env=config["env"]
             )
+
+        # Create settings with MCP server configurations
+        settings = Settings(
+            execution_engine="asyncio",
+            logger=LoggerSettings(type="console", level="info"),
+            mcp=MCPSettings(servers=mcp_servers),
+            openai=OpenAISettings(
+                api_key=self.api_key,
+                base_url=self.base_url,
+                default_model=self.model,
+            ),
+        )
+
+        # Initialize MCP app with settings
+        self.app = MCPApp(name="agent_executor", settings=settings)
+
+    async def _create_agent(self, server_names: List[str], app_context):
+        """Create agent with access to specified servers following precise pattern from llm_agent.py"""
+        agent = Agent(
+            name="executor_agent",
+            instruction="""You are an AI assistant with access to multiple tools and platforms. You can:
+            - Generate content using AI tools (Blackbox)
+            - Post and manage content on social media (Twitter, Bluesky, LinkedIn)
+            - Search for information and trends
+            - Create comprehensive content strategies
             
-            self.server_processes[server_name] = process
-            
-            # Give the server a moment to start
-            await asyncio.sleep(0.5)
-            
-            return process.returncode is None
-            
-        except Exception as e:
-            print(f"Failed to start {server_name} server: {e}")
-            return False
-    
-    async def _get_client(self, server_name: str) -> Optional[Client]:
-        """Get or create a FastMCP client for the specified server"""
-        if server_name not in self.clients:
-            server_config = self._server_config.get(server_name)
-            if not server_config:
-                return None
-                
-            # Create client with STDIO transport that manages the server process
-            from fastmcp.client.transports import StdioTransport
-            
-            # Use all current environment variables (which now includes .env values)
-            env = dict(os.environ)
-            
-            # Get the script path
-            script_path = Path(__file__).parent / server_config["script"]
-            
-            # Create STDIO transport that will manage the server process
-            transport = StdioTransport(
-                command="uv",
-                args=["run", "python", str(script_path)],
-                env=env,
-                cwd=str(Path(__file__).parent)
-            )
-            
-            self.clients[server_name] = Client(transport)
-                
-        return self.clients[server_name]
+            Always choose the most appropriate tools for each task and explain your actions.""",
+            server_names=server_names
+        )
+        return agent
     
     async def cleanup(self):
-        """Clean up all clients (StdioTransport manages server processes automatically)"""
-        for client in self.clients.values():
-            try:
-                await client.close()
-            except:
-                pass
-        
-        self.clients.clear()
-        self.server_processes.clear()  # Keep for compatibility but not used
+        """Clean up resources"""
+        # mcp-agent handles cleanup automatically through context managers
+        pass
     
     async def execute_parallel(self, prompt: str, server_names: List[str], 
                              prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
         """
-        Execute prompt across multiple servers/models in parallel
+        Execute prompt across multiple servers using LLM agent following precise llm_agent.py pattern
         
         Args:
             prompt: The prompt text to send
@@ -175,6 +155,7 @@ class FastMCPExecutor:
         Returns:
             List of ExecutorResult objects with results from each server
         """
+        import time
         results = []
         
         # Filter to valid server names
@@ -193,120 +174,79 @@ class FastMCPExecutor:
         if not valid_servers:
             return results
         
+        start_time = time.time()
+        
         try:
-            # Create tasks for parallel execution
-            tasks = []
-            for server_name in valid_servers:
-                task = self._execute_single_server(prompt, prompt_name, server_name)
-                tasks.append(task)
-            
-            # Wait for all tasks to complete
-            parallel_results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Process results
-            for i, result in enumerate(parallel_results):
-                if isinstance(result, Exception):
-                    results.append(ExecutorResult(
-                        prompt_name=prompt_name,
-                        server_name=valid_servers[i],
-                        error=str(result),
-                        status="error"
-                    ))
-                else:
-                    results.append(result)
+            if not self.app:
+                raise RuntimeError("MCP app not initialized")
+
+            # Run the agent with the user message using modern pattern from llm_agent.py
+            async with self.app.run() as agent_app:
+                agent = await self._create_agent(valid_servers, agent_app)
+
+                # Use the modern attach_llm pattern (settings are already configured in app)
+                async with agent:
+                    llm = await agent.attach_llm(OpenAIAugmentedLLM)
+                    response = await llm.generate_str(prompt)
                     
+                    execution_time = time.time() - start_time
+                    
+                    # Create successful result for all requested servers
+                    for server_name in valid_servers:
+                        results.append(ExecutorResult(
+                            prompt_name=prompt_name,
+                            server_name=server_name,
+                            content=response,
+                            status="generated",
+                            execution_time=execution_time
+                        ))
+                        
         except Exception as e:
-            # If parallel execution fails completely, create error results for all servers
+            execution_time = time.time() - start_time
+            # If execution fails, create error results for all servers
             for server_name in valid_servers:
                 results.append(ExecutorResult(
                     prompt_name=prompt_name,
                     server_name=server_name,
-                    error=f"Parallel execution failed: {str(e)}",
-                    status="error"
+                    error=str(e),
+                    status="error",
+                    execution_time=execution_time
                 ))
         
         return results
     
     async def _execute_single_server(self, prompt: str, prompt_name: str, server_name: str) -> ExecutorResult:
-        """Execute prompt on a single server"""
-        import time
-        
-        start_time = time.time()
-        
-        try:
-            # Get the FastMCP client for this server
-            client = await self._get_client(server_name)
-            if not client:
-                return ExecutorResult(
-                    prompt_name=prompt_name,
-                    server_name=server_name,
-                    error=f"Failed to connect to {server_name} server",
-                    status="error"
-                )
-            
-            # Use the client to interact with the server
-            async with client:
-                # List available tools
-                tools = await client.list_tools()
-                
-                # For simplicity, use a general purpose tool if available
-                # In practice, you'd choose the appropriate tool based on the server
-                tool_name = None
-                if tools:
-                    tool_name = tools[0].name
-                
-                if tool_name:
-                    # Call the tool with the prompt
-                    response = await client.call_tool(tool_name, {"text": prompt})
-                    content = str(response)
-                else:
-                    # Fallback: just return the prompt as mock response
-                    content = f"Mock response for {server_name}: {prompt}"
-            
-            execution_time = time.time() - start_time
-            
-            return ExecutorResult(
-                prompt_name=prompt_name,
-                server_name=server_name,
-                content=content,
-                status="generated",
-                execution_time=execution_time
-            )
-            
-        except Exception as e:
-            execution_time = time.time() - start_time
-            return ExecutorResult(
-                prompt_name=prompt_name,
-                server_name=server_name,
-                error=str(e),
-                status="error",
-                execution_time=execution_time
-            )
+        """Execute prompt on a single server using LLM agent pattern"""
+        # This method is kept for compatibility but now uses the same agent-based approach
+        results = await self.execute_parallel(prompt, [server_name], prompt_name)
+        return results[0] if results else ExecutorResult(
+            prompt_name=prompt_name,
+            server_name=server_name,
+            error="No results returned",
+            status="error"
+        )
 
-
-# Add missing import
-import os
 
 # Global executor instance
 _executor = None
 
-def get_executor() -> FastMCPExecutor:
-    """Get or create the global executor instance"""
+def get_executor() -> MCPAgentExecutor:
+    """Get or create the global MCP agent executor instance"""
     global _executor
     if _executor is None:
-        _executor = FastMCPExecutor()
+        _executor = MCPAgentExecutor()
     return _executor
 
 
 async def execute_mcp_client(prompt: str, server_names: List[str], config: dict, 
                            prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
     """
-    Execute prompt across multiple servers/models in parallel using FastMCP
+    Execute prompt across multiple servers using MCP agent
     
     Args:
         prompt: The prompt text to send to servers
         server_names: List of server names to execute against
-        config: Configuration dictionary (kept for compatibility, not used with FastMCP)
+        config: Configuration dictionary (kept for compatibility, not used with mcp-agent)
         prompt_name: Name identifier for the prompt (for logging/tracking)
         
     Returns:
