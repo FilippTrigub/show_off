@@ -42,14 +42,14 @@ export interface GenerateContentResponse {
 }
 
 // Generate new content via backend
-export const generateContent = async (request: GenerateContentRequest): Promise<GenerateContentResponse> => {
-    const response = await fetchWithExponentialBackoff(`${BACKEND_URL}/generate-content`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request)
-    });
-    return await response.json();
-};
+// export const generateContent = async (request: GenerateContentRequest): Promise<GenerateContentResponse> => {
+//     const response = await fetchWithExponentialBackoff(`${BACKEND_URL}/generate-content`, {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify(request)
+//     });
+//     return await response.json();
+// };
 
 // Get all content items from MongoDB
 export const getContentItems = async (): Promise<ContentItem[]> => {
@@ -77,7 +77,7 @@ export const updateContentStatus = async (contentId: string, status: ContentItem
 
 // Update content text
 export const updateContentText = async (contentId: string, content: string): Promise<void> => {
-    await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/text`, {
+    await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/update`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })

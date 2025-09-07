@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import uvicorn
 from pathlib import Path
 from executor import execute_mcp_client, execute_with_fallback, get_error_summary, get_performance_summary
+from mongodb.content import content_controller, ContentModel
 
 load_dotenv()
 
@@ -34,6 +35,9 @@ class RephraseRequest(BaseModel):
 
 class UpdateStatusRequest(BaseModel):
     status: str  # "approved", "disapproved", "posted", etc.
+
+class UpdateContentRequest(BaseModel):
+    content: str
 
 class ContentResponse(BaseModel):
     id: str
@@ -302,6 +306,86 @@ async def update_content_status(content_id: str, request: UpdateStatusRequest):
     except Exception as e:
         print(f"Error updating content status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update status: {str(e)}")
+
+@app.get("/content")
+async def get_all_content():
+    """Get all content items from MongoDB"""
+    try:
+        content_items = await content_controller.get_all()
+        # Convert to dict format for JSON serialization
+        return [item.model_dump() for item in content_items]
+    except Exception as e:
+        print(f"Error fetching content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch content: {str(e)}")
+
+@app.get("/content/{content_id}")
+async def get_content_by_id(content_id: str):
+    """Get specific content item by ID"""
+    try:
+        content_item = await content_controller.get_by_id(content_id, raise_if_none=True)
+        return content_item.model_dump()
+    except Exception as e:
+        print(f"Error fetching content by ID: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Content not found: {str(e)}")
+
+@app.put("/content/{content_id}/status")
+async def update_content_status_endpoint(content_id: str, request: UpdateStatusRequest):
+    """Update content status using ContentController"""
+    try:
+        # Validate status values
+        valid_statuses = ["pending_validation", "approved", "rejected", "published", "pending", "disapproved", "posted"]
+        if request.status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+        
+        # Update status using update_by_id
+        await content_controller.update_by_id(content_id, {"status": request.status})
+        
+        # Get updated content to return
+        updated_content = await content_controller.get_by_id(content_id, raise_if_none=True)
+        
+        status_messages = {
+            "approved": "Content approved successfully!",
+            "rejected": "Content rejected.",
+            "pending_validation": "Content status updated to pending validation.",
+            "published": "Content marked as published!",
+            "posted": "Content marked as posted!",
+            "pending": "Content status updated to pending.",
+            "disapproved": "Content disapproved."
+        }
+        
+        message = status_messages.get(request.status, f"Status updated to: {request.status}")
+        
+        return ContentResponse(
+            id=content_id,
+            content=updated_content.content,
+            status=getattr(updated_content, 'status', request.status),
+            message=message
+        )
+        
+    except Exception as e:
+        print(f"Error updating content status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update status: {str(e)}")
+
+@app.put("/content/{content_id}/update")
+async def update_content_text(content_id: str, request: UpdateContentRequest):
+    """Update content text using ContentController"""
+    try:
+        # Update content using update_by_id
+        await content_controller.update_by_id(content_id, {"content": request.content})
+        
+        # Get updated content to return
+        updated_content = await content_controller.get_by_id(content_id, raise_if_none=True)
+        
+        return ContentResponse(
+            id=content_id,
+            content=updated_content.content,
+            status=getattr(updated_content, 'status', "updated"),
+            message="Content updated successfully!"
+        )
+        
+    except Exception as e:
+        print(f"Error updating content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update content: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)
