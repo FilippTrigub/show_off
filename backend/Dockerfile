@@ -24,10 +24,6 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Copy config files
-COPY config.yml ./
-COPY prompts.yml ./
-
 # Install dependencies using uv
 RUN uv pip install --system -r pyproject.toml
 
