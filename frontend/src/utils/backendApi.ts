@@ -95,10 +95,21 @@ export const getContentById = async (contentId: string): Promise<ContentItem> =>
 
 // Rephrase content via backend
 export const rephraseContent = async (contentId: string, tone?: number): Promise<string> => {
+    // Convert tone to instructions for the backend
+    const getInstructionsFromTone = (tone: number = 50): string => {
+        if (tone < 30) {
+            return "Make this content more formal and professional";
+        } else if (tone > 70) {
+            return "Make this content more casual, engaging, and fun with emojis";
+        } else {
+            return "Make this content more engaging and professional while maintaining balance";
+        }
+    };
+
     const response = await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/rephrase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tone })
+        body: JSON.stringify({ instructions: getInstructionsFromTone(tone) })
     });
     const result = await response.json();
     return result.content;

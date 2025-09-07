@@ -195,7 +195,7 @@ async def generate_content(request: GenerateRequest):
 
 @app.post("/content/{content_id}/rephrase", response_model=ContentResponse)
 async def rephrase_content(content_id: str, request: RephraseRequest):
-    """Rephrase content with given instructions using MCP client executor"""
+    """Rephrase content with given instructions using BlackBox MCP server through executor"""
 
     config = load_config()
 
@@ -203,45 +203,92 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
     try:
         content_item = await content_controller.get_by_id(content_id, raise_if_none=True)
         original_content = content_item.content
+        original_metadata = content_item.model_dump()
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Content not found: {str(e)}")
 
-    # Create rephrase prompt with instructions
+    # Create enhanced rephrase prompt that leverages BlackBox capabilities
     rephrase_prompt = f"""
-    Please rephrase the following content according to these instructions: {request.instructions}
-    
+    You have access to BlackBox AI tools and resources. Please use them to rephrase the following content according to these instructions: {request.instructions}
+
     Original content:
     {original_content}
-    
+
+    Instructions for rephrasing: {request.instructions}
+
+    Please:
+    1. Use BlackBox AI models to analyze and understand the content context
+    2. Generate a rephrased version that maintains the core message while following the given instructions
+    3. Ensure the new content is engaging, well-structured, and appropriate for the target platform
+    4. Return only the rephrased content without any additional commentary
+
     Rephrased content:
     """
 
-    # Use executor with fallback pattern - try multiple servers for best result
-    rephrase_servers = ["openai", "claude", "blackbox"]  # Prefer language models for rephrasing
-
-    result = await execute_with_fallback(
-        prompt=rephrase_prompt,
-        server_names=rephrase_servers,
-        config=config,
-        prompt_name="rephrase_content"
-    )
-
-    if result.content and result.status in ["generated", "mock"]:
-        # Persist rephrased content and update status in MongoDB
-        await content_controller.update_by_id(
-            content_id,
-            {"content": result.content, "status": "rephrased"}
+    # Use BlackBox server specifically for content regeneration
+    try:
+        executor_results = await execute_mcp_client(
+            prompt=rephrase_prompt,
+            server_names=["blackbox"],
+            config=config,
+            prompt_name="rephrase_content_blackbox"
         )
 
-        return ContentResponse(
-            id=content_id,
-            content=result.content,
-            status="rephrased",
-            message="Content successfully rephrased!"
+        # Process BlackBox results
+        for result in executor_results:
+            if result.content and result.status in ["generated", "mock"]:
+                # Update the content in MongoDB while preserving the original ID and all metadata
+                update_data = {
+                    "content": result.content.strip(),
+                    "status": "rephrased",
+                    # Preserve all original metadata while updating content
+                    "original_content": original_content,  # Keep a backup of original
+                    "rephrase_instructions": request.instructions,
+                    "rephrased_at": content_item.timestamp  # Add rephrase timestamp
+                }
+
+                await content_controller.update_by_id(content_id, update_data)
+
+                return ContentResponse(
+                    id=content_id,
+                    content=result.content.strip(),
+                    status="rephrased",
+                    message="Content successfully rephrased using BlackBox AI!"
+                )
+
+        # If BlackBox failed, fall back to other servers
+        fallback_result = await execute_with_fallback(
+            prompt=rephrase_prompt,
+            server_names=["openai", "claude"],
+            config=config,
+            prompt_name="rephrase_content_fallback"
         )
-    else:
-        # If all servers failed, return error
-        raise HTTPException(status_code=500, detail=f"Failed to rephrase content: {result.error}")
+
+        if fallback_result.content and fallback_result.status in ["generated", "mock"]:
+            # Update with fallback result
+            update_data = {
+                "content": fallback_result.content.strip(),
+                "status": "rephrased",
+                "original_content": original_content,
+                "rephrase_instructions": request.instructions,
+                "rephrased_at": content_item.timestamp,
+                "server_used": fallback_result.server_name
+            }
+
+            await content_controller.update_by_id(content_id, update_data)
+
+            return ContentResponse(
+                id=content_id,
+                content=fallback_result.content.strip(),
+                status="rephrased",
+                message=f"Content successfully rephrased using {fallback_result.server_name}!"
+            )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to access BlackBox or rephrase content: {str(e)}")
+
+    # If all attempts failed
+    raise HTTPException(status_code=500, detail="Failed to rephrase content: All AI services unavailable")
 
 
 @app.post("/content/{content_id}/approve", response_model=ContentResponse)
