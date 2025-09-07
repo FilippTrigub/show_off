@@ -6,7 +6,7 @@
 
 ## 👥 Meet ---
 
-## 📞 Contact & Supportnt Manager** was built by a talented team of developers and innovators for BlackBox Hack 2025:
+## THIS app was built by a talented team of developers Ai Engineers and innovators for BlackBox Hack 2025:
 
 - **Mehdi Berthé**
 - **Adrian Boamba**
@@ -14,9 +14,9 @@
 - **Abdellahi El Moustapha**
 - **Maryam Cherkaoui**
 
----le platforms. Built for the modern enterprise, it bridges the gap between technical innovation and marketing excellence.
+Built for the modern enterprise, it bridges the gap between technical innovation and marketing excellence.
 
----
+
 
 ## 💼 Business Value Proposition
 
