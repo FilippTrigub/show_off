@@ -194,24 +194,37 @@ body::before {
     box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
-    position: fixed;
-    top: 0;
-    left: -320px;
     height: 100vh;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 50;
     justify-content: flex-start;
     align-items: stretch;
+    flex-shrink: 0;
 }
 
-.sidebar.open {
-    left: 0;
-}
-
-@media (min-width: 1024px) {
+/* Mobile sidebar behavior */
+@media (max-width: 1023px) {
     .sidebar {
-        position: static;
+        position: fixed;
+        top: 0;
+        left: -320px;
+        z-index: 50;
+    }
+    
+    .sidebar.open {
         left: 0;
+    }
+}
+
+/* Desktop layout - sidebar and main content in row */
+@media (min-width: 1024px) {
+    .app-layout {
+        display: flex;
+        min-height: 100vh;
+    }
+    
+    .main-content {
+        flex: 1;
+        overflow-y: auto;
     }
 }
 

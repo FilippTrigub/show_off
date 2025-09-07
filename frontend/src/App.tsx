@@ -277,59 +277,74 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative">
-            <Header 
-                tone={tone}
-                onToneChange={setTone}
-                onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
+            {/* Header - only visible on mobile */}
+            <div className="lg:hidden">
+                <Header 
+                    tone={tone}
+                    onToneChange={setTone}
+                    onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+            </div>
             
-            <Sidebar 
-                postHistory={postHistory}
-                currentPushId={currentPushId}
-                onLoadPush={loadPush}
-                isOpen={isSidebarOpen}
-                backendConnected={backendConnected}
-                onOverlayClick={() => setIsSidebarOpen(false)}
-            />
+            {/* Desktop: Row layout with sidebar and main content */}
+            <div className="app-layout">
+                <Sidebar 
+                    postHistory={postHistory}
+                    currentPushId={currentPushId}
+                    onLoadPush={loadPush}
+                    isOpen={isSidebarOpen}
+                    backendConnected={backendConnected}
+                    onOverlayClick={() => setIsSidebarOpen(false)}
+                />
 
-            {/* Main Content */}
-            <main className="pt-20 px-4 pb-8">
-                <div className="max-w-2xl mx-auto space-y-6">
-                    {currentPosts.length > 0 ? (
-                        currentPosts.map((post, index) => (
-                            <PostCard 
-                                key={post.id}
-                                post={post}
-                                index={index}
-                                isLoading={isLoading[post.id] || false}
-                                onContentChange={async (event: React.ChangeEvent<HTMLTextAreaElement>, id: string) => {
-                                    const newContent = event.target.value;
-                                    try {
-                                        await updateContentText(id, newContent);
-                                        setPosts(prevPosts => 
-                                            prevPosts.map(p => 
-                                                p.id === id ? { ...p, content: newContent } : p
-                                            )
-                                        );
-                                    } catch (error) {
-                                        console.error('Error updating content:', error);
-                                    }
-                                }}
-                                onRephrase={(id: string) => rephrasePost(id)}
-                                onApprove={(id: string) => handleApprove(id)}
-                                onDisapprove={(id: string) => updatePostStatus(id, 'disapproved')}
-                                onReadAloud={(_id: string) => {
-                                    showNotification('Read aloud feature coming soon');
-                                }}
-                            />
-                        ))
-                    ) : (
-                        <div className="text-center text-white/60 py-12">
-                            <p>No content available. Check your backend connection.</p>
-                        </div>
-                    )}
-                </div>
-            </main>
+                {/* Main Content */}
+                <main className="main-content pt-20 lg:pt-8 px-4 pb-8">
+                    {/* Desktop Header - integrated into main content */}
+                    <div className="hidden lg:block mb-8">
+                        <Header 
+                            tone={tone}
+                            onToneChange={setTone}
+                            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                        />
+                    </div>
+
+                    <div className="max-w-2xl mx-auto space-y-6">
+                        {currentPosts.length > 0 ? (
+                            currentPosts.map((post, index) => (
+                                <PostCard 
+                                    key={post.id}
+                                    post={post}
+                                    index={index}
+                                    isLoading={isLoading[post.id] || false}
+                                    onContentChange={async (event: React.ChangeEvent<HTMLTextAreaElement>, id: string) => {
+                                        const newContent = event.target.value;
+                                        try {
+                                            await updateContentText(id, newContent);
+                                            setPosts(prevPosts => 
+                                                prevPosts.map(p => 
+                                                    p.id === id ? { ...p, content: newContent } : p
+                                                )
+                                            );
+                                        } catch (error) {
+                                            console.error('Error updating content:', error);
+                                        }
+                                    }}
+                                    onRephrase={(id: string) => rephrasePost(id)}
+                                    onApprove={(id: string) => handleApprove(id)}
+                                    onDisapprove={(id: string) => updatePostStatus(id, 'disapproved')}
+                                    onReadAloud={(_id: string) => {
+                                        showNotification('Read aloud feature coming soon');
+                                    }}
+                                />
+                            ))
+                        ) : (
+                            <div className="text-center text-white/60 py-12">
+                                <p>No content available. Check your backend connection.</p>
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
 
             {/* Notification */}
             {notification && (
