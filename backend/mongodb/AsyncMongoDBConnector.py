@@ -54,8 +54,7 @@ class AsyncMongoDBConnector:
             query = self._preprocess(query)
             document = await self.collection.find_one(query, projection, max_time_ms=max_time_ms)
             if not document and raise_if_none:
-                raise Exception(is_warning=True,
-                                       message=f"No document found for query: {query} in collection {self.collection_name}")
+                raise Exception(f"No document found for query: {query} in collection {self.collection_name}")
             return document or None
         except PyMongoError as e:
             raise Exception(f"Error while retrieving document from MongoDB: {e.__repr__()}")
@@ -75,8 +74,7 @@ class AsyncMongoDBConnector:
                 cursor = cursor.sort(sort_field, -1)
             documents = await cursor.to_list(length=limit)
             if not documents and raise_if_none:
-                raise Exception(is_warning=True,
-                                       message=f"No documents found for query: {query} in collection {self.collection_name}")
+                raise Exception(f"No documents found for query: {query} in collection {self.collection_name}")
             return documents or []
         except PyMongoError as e:
             raise Exception(f"Error while retrieving document from MongoDB: {e.__repr__()}")
