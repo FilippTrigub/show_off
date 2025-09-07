@@ -14,8 +14,3 @@ jobs:
 
       - name: Summarize and Send to API
         uses: FilippTrigub/show_off_action@marketing
-        with:
-          blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
-          api-key: ${{ secrets.API_KEY }}
-          api-url: 'https://your-api.com/changes'
-          model: 'blackboxai'
