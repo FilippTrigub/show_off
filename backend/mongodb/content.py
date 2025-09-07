@@ -3,12 +3,13 @@ from typing import List, Dict, Any
 
 from bson import ObjectId
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from mongodb.AsyncMongoDBConnector import AsyncMongoDBConnector
+from mongodb.mongodb import MongoModel
 
 
-class ContentModel(BaseModel):
+class ContentModel(MongoModel):
     """
     Content model with required attributes from GenerateRequest plus content attributes.
     Additional attributes are accepted without validation.

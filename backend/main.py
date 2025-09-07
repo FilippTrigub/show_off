@@ -7,17 +7,34 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 from pathlib import Path
+from bson import ObjectId
 from executor import execute_mcp_client, execute_with_fallback, get_error_summary, get_performance_summary
 from mongodb.content import content_controller, ContentModel
 
 load_dotenv()
+
+def serialize_objectid(item_dict):
+    """Helper function to serialize ObjectId fields to strings for JSON"""
+    if isinstance(item_dict, dict):
+        for key, value in item_dict.items():
+            if isinstance(value, ObjectId):
+                item_dict[key] = str(value)
+            elif isinstance(value, dict):
+                serialize_objectid(value)
+            elif isinstance(value, list):
+                for i, list_item in enumerate(value):
+                    if isinstance(list_item, dict):
+                        serialize_objectid(list_item)
+                    elif isinstance(list_item, ObjectId):
+                        value[i] = str(list_item)
+    return item_dict
 
 app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -312,8 +329,13 @@ async def get_all_content():
     """Get all content items from MongoDB"""
     try:
         content_items = await content_controller.get_all()
-        # Convert to dict format for JSON serialization
-        return [item.model_dump() for item in content_items]
+        # Convert to dict format for JSON serialization with proper ObjectId handling
+        result = []
+        for item in content_items:
+            item_dict = item.model_dump()
+            serialize_objectid(item_dict)
+            result.append(item_dict)
+        return result
     except Exception as e:
         print(f"Error fetching content: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch content: {str(e)}")
@@ -323,7 +345,9 @@ async def get_content_by_id(content_id: str):
     """Get specific content item by ID"""
     try:
         content_item = await content_controller.get_by_id(content_id, raise_if_none=True)
-        return content_item.model_dump()
+        item_dict = content_item.model_dump()
+        serialize_objectid(item_dict)
+        return item_dict
     except Exception as e:
         print(f"Error fetching content by ID: {str(e)}")
         raise HTTPException(status_code=404, detail=f"Content not found: {str(e)}")
