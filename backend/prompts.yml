@@ -3,74 +3,78 @@
 
 prompts:
   - name: "code_changes_summary"
-    content: """Generate a summary of recent codebase changes in a professional tone. 
-    Generate fitting images. 
-    Push it to mongodb with the schema and data model: repository: str
-    commit_sha: str
-    branch: str
-    summary: str
-    timestamp: str  # ISO format
+    content: |
+      Generate a summary of recent codebase changes in a professional tone. 
+      Generate fitting images. 
+      Push it to mongodb with the schema and data model: 
+      repository: str
+      commit_sha: str
+      branch: str
+      summary: str
+      timestamp: str  # ISO format
 
-    # Required content attributes
-    platform: str
-    status: str
-    content: str
-    image_content: List[str]
-    video_content: List[str]
-    audio_content: List[str]
-    """
+      # Required content attributes
+      platform: str
+      status: str
+      content: str
+      image_content: List[str]
+      video_content: List[str]
+      audio_content: List[str]
     server: "blackbox"
 
   - name: "email_notification"
-    content: """Create an email notification about the latest updates to the codebase.Generate fitting images. 
-    Push it to mongodb with the schema and data model: repository: str
-    commit_sha: str
-    branch: str
-    summary: str
-    timestamp: str  # ISO format
+    content: |
+      Create an email notification about the latest updates to the codebase. Generate fitting images. 
+      Push it to mongodb with the schema and data model: 
+      repository: str
+      commit_sha: str
+      branch: str
+      summary: str
+      timestamp: str  # ISO format
 
-    # Required content attributes
-    platform: str
-    status: str
-    content: str
-    image_content: List[str]
-    video_content: List[str]
-    audio_content: List[str]
-    """
+      # Required content attributes
+      platform: str
+      status: str
+      content: str
+      image_content: List[str]
+      video_content: List[str]
+      audio_content: List[str]
     server: "blackbox"
 
   - name: "linkedin_post"
-    content: """Draft a LinkedIn post announcing new features or changes. Generate fitting images. 
-    Push it to mongodb with the schema and data model: repository: str
-    commit_sha: str
-    branch: str
-    summary: str
-    timestamp: str  # ISO format
+    content: |
+      Draft a LinkedIn post announcing new features or changes. Generate fitting images. 
+      Push it to mongodb with the schema and data model: 
+      repository: str
+      commit_sha: str
+      branch: str
+      summary: str
+      timestamp: str  # ISO format
 
-    # Required content attributes
-    platform: str
-    status: str
-    content: str
-    image_content: List[str]
-    video_content: List[str]
-    audio_content: List[str]
-    """
+      # Required content attributes
+      platform: str
+      status: str
+      content: str
+      image_content: List[str]
+      video_content: List[str]
+      audio_content: List[str]
     server: "blackbox"
 
   - name: "tweet_update"
-    content: """Write a concise tweet about recent code commits.Generate fitting images. 
-    Push it to mongodb with the schema and data model: repository: str
-    commit_sha: str
-    branch: str
-    summary: str
-    timestamp: str  # ISO format
+    content: |
+      Write a concise tweet about recent code commits. Generate fitting images. 
+      Push it to mongodb with the schema and data model: 
+      repository: str
+      commit_sha: str
+      branch: str
+      summary: str
+      timestamp: str  # ISO format
 
-    # Required content attributes
-    platform: str
-    status: str
-    content: str
-    image_content: List[str]
-    video_content: List[str]
-    audio_content: List[str]
-    """
+      # Required content attributes
+      platform: str
+      status: str
+      content: str
+      image_content: List[str]
+      video_content: List[str]
+      audio_content: List[str]
     server: "blackbox"
