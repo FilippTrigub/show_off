@@ -1,5 +1,5 @@
 // MCP Backend API utilities
-const MCP_BACKEND_URL = 'http://localhost:8000'; // MCP server endpoint
+const MCP_BACKEND_URL = 'http://localhost:8001'; // MCP server endpoint
 
 // MCP tool call interface
 interface MCPToolCall {
