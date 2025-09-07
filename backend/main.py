@@ -82,7 +82,7 @@ class ContentResponse(BaseModel):
 
 
 def load_config():
-    config_path = Path(__file__).parent.parent / "config.yml"
+    config_path = "config.yml"
     with open(str(config_path), "r") as f:
         return yaml.safe_load(f)
 
