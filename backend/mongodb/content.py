@@ -59,6 +59,9 @@ class ContentController:
     async def delete_by_id(self, content_id: str) -> bool:
         return await self.mongodb.delete_one_document({"_id": ObjectId(content_id)})
 
+    async def update_by_id(self, content_id: str, update: dict):
+        return await self.mongodb.update_one_document({"_id": ObjectId(content_id)}, update, "$set")
+
 
 load_dotenv()
 content_controller = ContentController()
