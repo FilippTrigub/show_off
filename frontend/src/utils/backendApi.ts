@@ -11,7 +11,7 @@ export interface ContentItem {
     branch: string;
     prompt: string;
     content: string;
-    status: 'pending_validation' | 'approved' | 'rejected' | 'published';
+    status: 'pending' | 'rephrased' | 'approved' | 'rejected' | 'published';
     created_at?: string;
     updated_at?: string;
     media?: Array<{
@@ -154,7 +154,7 @@ export const getMockContentItems = (): ContentItem[] => [
         branch: 'main',
         prompt: 'Generate a LinkedIn post announcing new features or changes.',
         content: '🚀 Thrilled to announce a new project launch! Our team has been working on a groundbreaking new feature that will streamline developer workflows and enhance collaboration. So excited to see how this impacts the community! #tech #softwaredevelopment #innovation',
-        status: 'pending_validation',
+        status: 'pending',
         platform: 'LinkedIn',
         author: { 
             name: 'Alex Johnson', 
@@ -174,7 +174,7 @@ export const getMockContentItems = (): ContentItem[] => [
         branch: 'develop',
         prompt: 'Write a concise tweet about recent code commits.',
         content: 'Just got a fresh code push from a dev! My algorithms say this is a huge step forward for the project. Let\'s see what happens next! 🤖 #ai #programming #github',
-        status: 'pending_validation',
+        status: 'pending',
         platform: 'X',
         author: { 
             name: 'CodeGenBot', 
@@ -193,7 +193,7 @@ export const getMockContentItems = (): ContentItem[] => [
         branch: 'main',
         prompt: 'Create an email notification about the latest updates to the codebase.',
         content: 'Subject: Important Update on Q4 Initiatives\n\nHi Team,\n\nI\'m writing to share a brief update on the progress of our Q4 initiatives. Please review the attached document for detailed insights and feel free to reach out with any questions.\n\nBest regards,\nMarketing Team',
-        status: 'pending_validation',
+        status: 'pending',
         platform: 'Email',
         author: { 
             name: 'Marketing Dept', 
@@ -210,7 +210,7 @@ export const getMockContentItems = (): ContentItem[] => [
         branch: 'feature/ui-update',
         prompt: 'Generate a summary of recent codebase changes in a professional tone.',
         content: '🔥 This is how we roll at DevLounge! Brainstorming sessions that are as fun as they are productive. Love the energy and the creative ideas everyone is bringing to the table! #office #worklife #teamwork',
-        status: 'pending_validation',
+        status: 'pending',
         platform: 'TikTok',
         author: { 
             name: 'DevLounge', 

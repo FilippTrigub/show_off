@@ -15,8 +15,8 @@ const convertContentItemToPost = (item: ContentItem): Post => ({
         avatar: 'https://placehold.co/100x100/667eea/ffffff?text=SYS' 
     },
     content: item.content || '',
-    status: item.status === 'pending_validation' ? 'pending' : 
-           item.status === 'approved' ? 'approved' : 
+    status: item.status === 'pending' ? 'pending' : 
+           item.status === 'rephrased' ? 'approved' : 
            item.status === 'rejected' ? 'disapproved' : 'posted',
     media: item.media || [],
     repository: item.repository,
