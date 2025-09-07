@@ -58,6 +58,7 @@ class MCPAgentExecutor:
             model: BlackboxAI model to use
             base_url: BlackboxAI API base URL
         """
+        load_dotenv()
         self.api_key = api_key or os.getenv("BLACKBOX_API_KEY")
         if not self.api_key:
             raise ValueError("BlackboxAI API key is required. Set BLACKBOX_API_KEY environment variable.")
@@ -89,6 +90,13 @@ class MCPAgentExecutor:
             "twitter": {
                 "command": "uv",
                 "args": ["run", "python", "servers/twitter-mcp-python/server.py"],
+                "cwd": str(Path(__file__).parent),
+                "env": dict(os.environ)
+            },
+            "mongodb": {
+                "command": "npx",
+                "args": ["-y", "mongodb-mcp-server", "--connectionString",
+                         os.getenv("MONGODB_URI"), ],
                 "cwd": str(Path(__file__).parent),
                 "env": dict(os.environ)
             }

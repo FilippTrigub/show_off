@@ -88,7 +88,7 @@ def load_config():
 
 
 def load_prompts():
-    prompts_path = Path(__file__).parent / "prompts.yml"
+    prompts_path = "prompts.yml"
     with open(prompts_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -142,7 +142,7 @@ async def generate_content(request: GenerateRequest):
         # Execute prompt on specified server
         executor_results = await execute_mcp_client(
             prompt=prompt_content,
-            server_names=[server_name],
+            server_names=[server_name, 'mongodb'],
             config=config,
             prompt_name=prompt_name
         )
