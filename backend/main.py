@@ -279,7 +279,8 @@ async def approve_and_post_content(content_id: str):
             successful_posts.append(f"{result.server_name}: {result.content}")
 
     if successful_posts:
-        # TODO: Update content status to "posted" in MongoDB
+        # Update content status to "posted" in MongoDB
+        await content_controller.update_by_id(content_id, {"status": "posted"})
 
         return ContentResponse(
             id=content_id,
@@ -443,8 +444,9 @@ async def update_content_text(content_id: str, request: UpdateContentRequest):
 
 
 @app.get("/health")
+@app.options("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with CORS support"""
     return {"message": "healthy"}
 
 
