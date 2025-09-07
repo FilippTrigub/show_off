@@ -2,7 +2,19 @@
 
 ## 🎯 Executive Summary
 
-**AI Content Manager** is a revolutionary platform that transforms how businesses manage their social media presence by automatically generating, curating, and distributing engaging content across multiple platforms. Built for the modern enterprise, it bridges the gap between technical innovation and marketing excellence.
+**AI Content Manager** is a revolutionary platform that transforms how businesses manage their social media presence by automatically generating, curating, and distributing engaging c---
+
+## 👥 Meet the Team
+
+**AI Content Manager** was built by a talented team of developers and innovators for BlackBox Hack 2025:
+
+- **Mehdi Berthé**
+- **Adrian Boamba**
+- **Filipp Trigub**
+- **Abdellahi El Moustapha**
+- **Maryam Cherkaoui**
+
+---le platforms. Built for the modern enterprise, it bridges the gap between technical innovation and marketing excellence.
 
 ---
 
