@@ -24,4 +24,5 @@ dependencies = [
     "mcp-agent>=0.1.17",
     "openai>=1.106.1",
     "motor>=3.7.1",
+    "rich>=14.1.0",
 ]

@@ -34,6 +34,7 @@ class ContentModel(BaseModel):
 
 
 class ContentController:
+    load_dotenv()
     mongodb = AsyncMongoDBConnector(
         database_name=os.environ.get("MONGODB_DB_NAME"),
         collection_name="content")

@@ -289,6 +289,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-jose", extra = ["cryptography"] },
     { name = "pyyaml" },
+    { name = "rich" },
     { name = "tweepy" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -312,6 +313,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
+    { name = "rich", specifier = ">=14.1.0" },
     { name = "tweepy", specifier = ">=4.16.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
 ]
