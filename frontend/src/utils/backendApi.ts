@@ -62,7 +62,7 @@ export const getContentItems = async (): Promise<ContentItem[]> => {
     } catch (error) {
         console.error('Error fetching content items:', error);
         // Return mock data if backend is not available
-        return getMockContentItems();
+        return null;
     }
 };
 
