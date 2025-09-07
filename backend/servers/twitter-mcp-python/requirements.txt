@@ -1,0 +1,9 @@
+"""
+Requirements file for Twitter MCP Server (Updated)
+
+This file specifies the dependencies for the modern Twitter MCP server implementation.
+The server now uses FastMCP for simplified MCP server creation and STDIO transport.
+"""
+mcp>=1.2.0
+tweepy>=4.12.0
+pydantic>=2.0.0

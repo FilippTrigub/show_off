@@ -1,11 +1,11 @@
 [project]
-name = "bbai-mcp-client"
+name = "backend"
 version = "0.1.0"
-description = "MCP Client for AI Content Publisher"
+description = "FastAPI backend for AI Content Publisher with multiple MCP server support"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "fastmcp>=0.9.0",
+    "fast-agent-mcp>=0.1.0",
     "pymongo>=4.6.0",
     "PyYAML>=6.0.0",
     "python-dotenv>=1.0.0",
@@ -13,5 +13,14 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.0.0",
     "pytest>=7.0.0",
-    "httpx>=0.25.0"
+    "httpx>=0.25.0",
+    "asyncio>=3.4.3",
+    "fastmcp>=2.11.2",
+    "pydantic-settings>=2.10.1",
+    "python-jose[cryptography]>=3.3.0",
+    "mcp[cli]>=1.2.0",
+    "tweepy>=4.16.0",
+    "atproto>=0.0.62",
+    "mcp-agent>=0.1.17",
+    "openai>=1.106.1",
 ]
