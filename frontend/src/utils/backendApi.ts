@@ -227,10 +227,17 @@ export const getMockContentItems = (): ContentItem[] => [
 // Test backend connection
 export const testBackendConnection = async (): Promise<boolean> => {
     try {
-        const response = await fetch(`${BACKEND_URL}/health`, { method: 'OPTIONS' });
-        return response.status === 405; // Method not allowed means endpoint exists
+        const response = await fetch(`${BACKEND_URL}/health`, { 
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return data.message === 'healthy';
+        }
+        return false;
     } catch (error) {
-        console.log('Backend not available, using mock data');
+        console.log('Backend not available, using mock data:', error);
         return false;
     }
 };

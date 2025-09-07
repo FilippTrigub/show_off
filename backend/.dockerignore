@@ -62,7 +62,3 @@ Dockerfile*
 # Documentation
 README.md
 *.md
-
-# Config files that should be mounted
-config.yml
-prompts.yml

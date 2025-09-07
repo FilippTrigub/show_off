@@ -41,33 +41,41 @@ const App: React.FC = () => {
         const loadContentFromBackend = async () => {
             try {
                 const isBackendAvailable = await testBackendConnection();
-                setBackendConnected(!!isBackendAvailable);
+                setBackendConnected(isBackendAvailable);
                 
-                const contentItems = await getContentItems();
-                
-                // Convert backend content to posts
-                const backendPosts = contentItems.map(convertContentItemToPost);
-                
-                // Group posts by repository/branch for history
-                const groupedPosts = backendPosts.reduce((acc, post) => {
-                    const key = `${post.repository || 'unknown'}-${post.branch || 'main'}`;
-                    if (!acc[key]) {
-                        acc[key] = [];
+                if (isBackendAvailable) {
+                    const contentItems = await getContentItems();
+                    
+                    if (contentItems && contentItems.length > 0) {
+                        // Convert backend content to posts
+                        const backendPosts = contentItems.map(convertContentItemToPost);
+                        
+                        // Group posts by repository/branch for history
+                        const groupedPosts = backendPosts.reduce((acc, post) => {
+                            const key = `${post.repository || 'unknown'}-${post.branch || 'main'}`;
+                            if (!acc[key]) {
+                                acc[key] = [];
+                            }
+                            acc[key].push(post);
+                            return acc;
+                        }, {} as Record<string, Post[]>);
+
+                        // Create push history from grouped posts
+                        const newPushes: PushHistory[] = Object.entries(groupedPosts).map(([key, posts]) => ({
+                            id: key,
+                            posts
+                        }));
+
+                        setPostHistory(newPushes);
+                        console.log('Successfully loaded content from backend:', contentItems.length, 'items');
+                    } else {
+                        console.log('No content available from backend');
+                        setPostHistory([]);
                     }
-                    acc[key].push(post);
-                    return acc;
-                }, {} as Record<string, Post[]>);
-
-                // Create push history from grouped posts
-                const newPushes: PushHistory[] = Object.entries(groupedPosts).map(([key, posts]) => ({
-                    id: key,
-                    posts
-                }));
-
-                setPostHistory(newPushes);
-                
-                if (!isBackendAvailable) {
+                } else {
+                    console.log('Backend not available, using mock data');
                     showNotification("Backend unavailable - using mock data");
+                    // Could load mock data here if needed
                 }
             } catch (error) {
                 console.error('Error loading content from backend:', error);
