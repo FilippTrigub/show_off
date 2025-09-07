@@ -318,8 +318,62 @@ async def approve_and_post_content(content_id: str):
     Please format appropriately for each platform and return confirmation of posting.
     """
 
-    # Use BlackBox server to generate social media posts (since platform servers aren't configured)
+    # Use platform-specific MCP servers for actual social media posting
+    platform_server_map = {
+        "linkedin": "linkedin",
+        "twitter": "twitter", 
+        "x": "twitter",  # Twitter/X mapping
+        "bluesky": "bluesky"
+    }
+    
+    target_server = platform_server_map.get(content.platform.lower(), "blackbox")
+    
     try:
+        # First generate optimized content using BlackBox
+        content_generation_prompt = f"""
+        Optimize this content for {content.platform} posting:
+        
+        {content.content}
+        
+        Create a {content.platform}-appropriate version that maintains the core message while following platform best practices for engagement, character limits, and formatting.
+        """
+        
+        generation_results = await execute_mcp_client(
+            prompt=content_generation_prompt,
+            server_names=["blackbox"],
+            config=config,
+            prompt_name="optimize_content_for_platform"
+        )
+        
+        optimized_content = content.content  # fallback
+        for result in generation_results:
+            if result.content and result.status in ["generated", "mock"]:
+                optimized_content = result.content.strip()
+                break
+        
+        # Now actually post using platform-specific server
+        if target_server != "blackbox":
+            posting_results = await execute_mcp_client(
+                prompt=f"Post this content to {content.platform}: {optimized_content}",
+                server_names=[target_server],
+                config=config,
+                prompt_name="actual_platform_post"
+            )
+            
+            # Check if actual posting succeeded
+            for result in posting_results:
+                if result.content and result.status in ["generated", "posted", "success"]:
+                    # Update content status to "posted" in MongoDB
+                    await content_controller.update_by_id(content_id, {"status": "posted"})
+                    
+                    return ContentResponse(
+                        id=content_id,
+                        content=f"✅ ACTUALLY POSTED to {content.platform}: {optimized_content}",
+                        status="posted",
+                        message=f"Content successfully posted to {content.platform}!"
+                    )
+        
+        # Fallback to BlackBox simulation if platform server fails
         executor_results = await execute_mcp_client(
             prompt=posting_prompt,
             server_names=["blackbox"],  # Use working BlackBox server instead of platform-specific ones

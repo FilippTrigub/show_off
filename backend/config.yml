@@ -10,6 +10,18 @@ mcp:
     claude:
       url: ${CLAUDE_MCP_SERVER_URL}
       type: "claude"
+    linkedin:
+      url: "uv run python -m linkedin_mcp"
+      type: "stdio"
+      cwd: "./servers/linkedin_mcp"
+    twitter:
+      url: "uv run python -m twitter-mcp-python.server"
+      type: "stdio" 
+      cwd: "./servers/twitter-mcp-python"
+    bluesky:
+      url: "uv run python -m bluesky-mcp-python.server"
+      type: "stdio"
+      cwd: "./servers/bluesky-mcp-python"
 
 # AI API key (if needed for fallback or other AI calls)
 ai:
