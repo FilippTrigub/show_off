@@ -13,6 +13,6 @@ jobs:
           fetch-depth: 2  # Need at least 2 commits for git diff
 
       - name: Summarize and Send to API
-        uses: FilippTrigub/show_off_action@v1.3
+        uses: FilippTrigub/show_off_action@v1.4
         with:
           blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
