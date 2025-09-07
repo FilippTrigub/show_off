@@ -1,0 +1,21 @@
+name: Summarize and Send Changes to API
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  summarize-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2  # Need at least 2 commits for git diff
+
+      - name: Summarize and Send to API
+        uses: actions/summarize-and-send-changes-to-api@v1
+        with:
+          blackbox-api-key: ${{ secrets.BLACKBOX_API_KEY }}
+          api-key: ${{ secrets.API_KEY }}
+          api-url: 'https://your-api.com/changes'
+          model: 'blackboxai'
