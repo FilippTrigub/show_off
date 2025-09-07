@@ -8,7 +8,8 @@ from pydantic import BaseModel
 import uvicorn
 from pathlib import Path
 from bson import ObjectId
-from executor import execute_mcp_client, execute_with_fallback, get_error_summary, get_performance_summary
+from executor import execute_mcp_client, execute_with_fallback, get_error_summary, get_performance_summary, \
+    validate_server_by_platform
 from mongodb.content import content_controller, ContentModel
 
 load_dotenv()
@@ -226,6 +227,7 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
         raise HTTPException(status_code=500, detail=f"Failed to rephrase content: {result.error}")
 
 
+# todo fix first
 @app.post("/content/{content_id}/approve", response_model=ContentResponse)
 async def approve_and_post_content(content_id: str):
     """Approve content and post to social media using MCP client executor"""
@@ -238,24 +240,24 @@ async def approve_and_post_content(content_id: str):
     # 3. Use social media MCP servers to post content
     # 4. Update status to "posted"
 
-    # For now, use placeholder content
-    content_to_post = f"Content {content_id} ready for posting to social media"
+    content = await content_controller.get_by_id(content_id)
+
+    server_valid = validate_server_by_platform(content.platform)
+    if not server_valid:
+        raise HTTPException(500, "invalid server")
 
     # Create posting prompt for social media platforms
     posting_prompt = f"""
     Post this approved content to social media platforms:
     
-    Content: {content_to_post}
+    Content: {content.content}
     
     Please format appropriately for each platform and return confirmation of posting.
     """
 
-    # Use executor with social media focused servers
-    posting_servers = ["blackbox"]  # Could extend to dedicated social media MCP servers
-
     executor_results = await execute_mcp_client(
         prompt=posting_prompt,
-        server_names=posting_servers,
+        server_names=[content.platform.lower()],
         config=config,
         prompt_name="approve_and_post"
     )

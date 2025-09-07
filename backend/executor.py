@@ -45,8 +45,8 @@ class MCPAgentExecutor:
     """
     MCP Agent Executor using mcp-agent library for LLM-powered execution
     """
-    
-    def __init__(self, 
+
+    def __init__(self,
                  api_key: Optional[str] = None,
                  model: str = "blackboxai/google/gemini-2.5-pro",
                  base_url: str = "https://api.blackbox.ai/v1"):
@@ -65,7 +65,7 @@ class MCPAgentExecutor:
         self.model = model
         self.base_url = base_url
         self.app = None
-        
+
         # Available MCP servers configuration
         self._server_config = {
             "blackbox": {
@@ -75,7 +75,7 @@ class MCPAgentExecutor:
                 "env": dict(os.environ)
             },
             "bluesky": {
-                "command": "uv", 
+                "command": "uv",
                 "args": ["run", "python", "servers/bluesky-mcp-python/server.py"],
                 "cwd": str(Path(__file__).parent),
                 "env": dict(os.environ)
@@ -94,7 +94,7 @@ class MCPAgentExecutor:
             }
         }
         self._setup_mcp_app()
-        
+
     def _setup_mcp_app(self):
         """Setup MCP application with server configurations using Settings"""
         # Build server configurations based on requested servers
@@ -136,14 +136,14 @@ class MCPAgentExecutor:
             server_names=server_names
         )
         return agent
-    
+
     async def cleanup(self):
         """Clean up resources"""
         # mcp-agent handles cleanup automatically through context managers
         pass
-    
-    async def execute_parallel(self, prompt: str, server_names: List[str], 
-                             prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
+
+    async def execute_parallel(self, prompt: str, server_names: List[str],
+                               prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
         """
         Execute prompt across multiple servers using LLM agent following precise llm_agent.py pattern
         
@@ -157,7 +157,7 @@ class MCPAgentExecutor:
         """
         import time
         results = []
-        
+
         # Filter to valid server names
         valid_servers = []
         for server_name in server_names:
@@ -170,12 +170,12 @@ class MCPAgentExecutor:
                     error=f"Unknown server: {server_name}",
                     status="error"
                 ))
-        
+
         if not valid_servers:
             return results
-        
+
         start_time = time.time()
-        
+
         try:
             if not self.app:
                 raise RuntimeError("MCP app not initialized")
@@ -188,9 +188,9 @@ class MCPAgentExecutor:
                 async with agent:
                     llm = await agent.attach_llm(OpenAIAugmentedLLM)
                     response = await llm.generate_str(prompt)
-                    
+
                     execution_time = time.time() - start_time
-                    
+
                     # Create successful result for all requested servers
                     for server_name in valid_servers:
                         results.append(ExecutorResult(
@@ -200,7 +200,7 @@ class MCPAgentExecutor:
                             status="generated",
                             execution_time=execution_time
                         ))
-                        
+
         except Exception as e:
             execution_time = time.time() - start_time
             # If execution fails, create error results for all servers
@@ -212,9 +212,9 @@ class MCPAgentExecutor:
                     status="error",
                     execution_time=execution_time
                 ))
-        
+
         return results
-    
+
     async def _execute_single_server(self, prompt: str, prompt_name: str, server_name: str) -> ExecutorResult:
         """Execute prompt on a single server using LLM agent pattern"""
         # This method is kept for compatibility but now uses the same agent-based approach
@@ -230,6 +230,7 @@ class MCPAgentExecutor:
 # Global executor instance
 _executor = None
 
+
 def get_executor() -> MCPAgentExecutor:
     """Get or create the global MCP agent executor instance"""
     global _executor
@@ -238,8 +239,10 @@ def get_executor() -> MCPAgentExecutor:
     return _executor
 
 
-async def execute_mcp_client(prompt: str, server_names: List[str], config: dict, 
-                           prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
+async def execute_mcp_client(
+        prompt: str,
+        server_names: List[str], config: dict,
+        prompt_name: str = "custom_prompt") -> List[ExecutorResult]:
     """
     Execute prompt across multiple servers using MCP agent
     
@@ -261,8 +264,8 @@ async def execute_mcp_client(prompt: str, server_names: List[str], config: dict,
         await executor.cleanup()
 
 
-async def execute_single_server(prompt: str, server_name: str, config: dict, 
-                               prompt_name: str = "single_prompt") -> ExecutorResult:
+async def execute_single_server(prompt: str, server_name: str, config: dict,
+                                prompt_name: str = "single_prompt") -> ExecutorResult:
     """
     Execute prompt on a single server (convenience function)
     
@@ -284,8 +287,8 @@ async def execute_single_server(prompt: str, server_name: str, config: dict,
     )
 
 
-async def execute_with_fallback(prompt: str, server_names: List[str], config: dict, 
-                              prompt_name: str = "fallback_prompt") -> ExecutorResult:
+async def execute_with_fallback(prompt: str, server_names: List[str], config: dict,
+                                prompt_name: str = "fallback_prompt") -> ExecutorResult:
     """
     Execute prompt with parallel execution then return first successful result
     
@@ -299,12 +302,12 @@ async def execute_with_fallback(prompt: str, server_names: List[str], config: di
         First successful ExecutorResult, or last error if all fail
     """
     results = await execute_mcp_client(prompt, server_names, config, prompt_name)
-    
+
     # Return first successful result
     for result in results:
         if result.content and result.status == "generated":
             return result
-    
+
     # If all failed, return the first result (which should be an error)
     return results[0] if results else ExecutorResult(
         prompt_name=prompt_name,
@@ -337,7 +340,7 @@ def get_error_summary(results: List[ExecutorResult]) -> str:
     Returns:
         String summary of all errors
     """
-    errors = [f"{result.server_name}: {result.error}" 
+    errors = [f"{result.server_name}: {result.error}"
               for result in results if result.error]
     return "; ".join(errors) if errors else "No errors"
 
@@ -355,11 +358,11 @@ def get_performance_summary(results: List[ExecutorResult]) -> Dict[str, float]:
     successful = get_successful_results(results)
     if not successful:
         return {"total_time": 0, "fastest": 0, "slowest": 0, "average": 0}
-    
+
     times = [r.execution_time for r in successful if r.execution_time]
     if not times:
         return {"total_time": 0, "fastest": 0, "slowest": 0, "average": 0}
-    
+
     return {
         "total_time": max(times),  # Parallel execution time is the slowest
         "fastest": min(times),
@@ -368,3 +371,9 @@ def get_performance_summary(results: List[ExecutorResult]) -> Dict[str, float]:
         "successful_count": len(successful),
         "total_count": len(results)
     }
+
+
+def validate_server_by_platform(platform: str) -> bool:
+    executor = get_executor()
+    server = executor._server_config.get(platform.lower())
+    return server is not None

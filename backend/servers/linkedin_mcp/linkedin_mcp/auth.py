@@ -7,7 +7,7 @@ from typing import Optional
 import httpx
 from pydantic import BaseModel
 
-from ..config.settings import settings
+from settings import settings
 
 logger = logging.getLogger(__name__)
 

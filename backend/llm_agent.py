@@ -59,27 +59,27 @@ class MCPLLMAgent:
             logger=LoggerSettings(type="console", level="info"),
             mcp=MCPSettings(
                 servers={
-                    "blackbox": MCPServerSettings(
+                    # "blackbox": MCPServerSettings(
+                    #     command="uv",
+                    #     args=["run", "python", "servers/bbai_mcp_server/blackbox_mcp_server/server.py"],
+                    #     cwd=str(Path(__file__).parent),
+                    #     env=dict(os.environ)
+                    # ),
+                    # "bluesky": MCPServerSettings(
+                    #     command="uv",
+                    #     args=["run", "python", "servers/bluesky_mcp_python/server.py"],
+                    #     cwd=str(Path(__file__).parent),
+                    #     env=dict(os.environ)
+                    # ),
+                    "linkedin": MCPServerSettings(
                         command="uv",
-                        args=["run", "python", "servers/bbai_mcp_server/blackbox_mcp_server/server.py"],
+                        args=["run", "python", "servers/linkedin_mcp/linkedin_mcp/server.py"],
                         cwd=str(Path(__file__).parent),
                         env=dict(os.environ)
                     ),
-                    # "bluesky": MCPServerSettings(
-                    #     command="uv",
-                    #     args=["run", "python", "servers/bluesky-mcp-python/server.py"],
-                    #     cwd=str(Path(__file__).parent),
-                    #     env=dict(os.environ)
-                    # ),
-                    # "linkedin": MCPServerSettings(
-                    #     command="uv",
-                    #     args=["run", "python", "servers/linkedin-mcp/linkedin_mcp/server.py"],
-                    #     cwd=str(Path(__file__).parent),
-                    #     env=dict(os.environ)
-                    # ),
                     # "twitter": MCPServerSettings(
                     #     command="uv",
-                    #     args=["run", "python", "servers/twitter-mcp-python/server.py"],
+                    #     args=["run", "python", "servers/twitter_mcp_python/server.py"],
                     #     cwd=str(Path(__file__).parent),
                     #     env=dict(os.environ)
                     # )
@@ -108,10 +108,10 @@ class MCPLLMAgent:
             
             Always choose the most appropriate tools for each task and explain your actions.""",
             server_names=[
-                "blackbox",
+                # "blackbox",
                 # "twitter",
                 # "bluesky",
-                # "linkedin"
+                "linkedin"
             ]
         )
         return agent

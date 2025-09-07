@@ -7,8 +7,8 @@ from typing import Optional, List
 import httpx
 from pydantic import BaseModel, FilePath
 
-from ..config.settings import settings
-from ..linkedin.auth import LinkedInOAuth
+from settings import settings
+from auth import LinkedInOAuth
 
 logger = logging.getLogger(__name__)
 

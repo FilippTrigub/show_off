@@ -7,11 +7,11 @@ from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP, Context
 from pydantic import FilePath
 
-from linkedin.auth import LinkedInOAuth, AuthError
-from linkedin.post import PostManager, PostRequest, PostCreationError, MediaRequest, PostVisibility
+from auth import LinkedInOAuth, AuthError
+from post import PostManager, PostRequest, PostCreationError, MediaRequest, PostVisibility
 from callback_server import LinkedInCallbackServer
 from utils.logging import configure_logging
-from config.settings import settings
+from settings import settings
 
 # Configure logging
 configure_logging(
@@ -235,3 +235,7 @@ def main():
     load_dotenv()
     logger.info("Starting LinkedIn server...")
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()

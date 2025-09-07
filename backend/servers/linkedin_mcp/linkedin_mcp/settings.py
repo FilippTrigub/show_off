@@ -60,7 +60,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
         validate_default = True
-        extra = "forbid"
+        extra = "allow"
 
     @property
     def formatted_scopes(self) -> str:
