@@ -6,7 +6,7 @@ class Config:
     def __init__(self):
         self.api_key = self._get_api_key()
         self.base_url = "https://api.blackbox.ai"
-        self.timeout = 30.0
+        self.timeout = 120.0  # Increased timeout for slow BlackBox API
         
     def _get_api_key(self) -> str:
         load_dotenv()
