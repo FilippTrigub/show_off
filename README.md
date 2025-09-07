@@ -254,16 +254,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## � Meet the Team
-
-**AI Content Manager** was built by a talented team of developers and innovators for BlackBox Hack 2025:
-
-### 🎯 **Core Team**
-- **Mehdi Berthé** - Full-Stack Developer & AI Integration Specialist
-- **Adrian Boamba** - Frontend Architect & UI/UX Designer  
-- **Filipp Trigub** - Backend Engineer & DevOps Lead
-- **Abdellahi El Moustapha** - Frontend Developer & Component Specialist
-- **Maryam Cherkaoui** - Product Manager & Business Strategy
 
 ### 🚀 **Team Philosophy**
 *"Combining technical excellence with business innovation to create solutions that matter."*
