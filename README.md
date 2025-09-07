@@ -4,9 +4,9 @@
 
 **AI Content Manager** is a revolutionary platform that transforms how businesses manage their social media presence by automatically generating, curating, and distributing engaging c---
 
-## 👥 Meet the Team
+## 👥 Meet ---
 
-**AI Content Manager** was built by a talented team of developers and innovators for BlackBox Hack 2025:
+## 📞 Contact & Supportnt Manager** was built by a talented team of developers and innovators for BlackBox Hack 2025:
 
 - **Mehdi Berthé**
 - **Adrian Boamba**
