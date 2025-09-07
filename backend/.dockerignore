@@ -55,10 +55,6 @@ htmlcov/
 Dockerfile*
 .dockerignore
 
-# Environment files (these will be mounted as secrets)
-.env
-*.env
-
 # Temporary files
 *.tmp
 *.temp
