@@ -189,6 +189,7 @@ body::before {
     background: var(--glass-bg);
     border-right: 1px solid var(--glass-border);
     padding: 2rem;
+    padding-top: 1rem;
     color: white;
     box-shadow: var(--shadow-soft);
     display: flex;
@@ -196,9 +197,11 @@ body::before {
     position: fixed;
     top: 0;
     left: -320px;
-    height: 100%;
+    height: 100vh;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 50;
+    justify-content: flex-start;
+    align-items: stretch;
 }
 
 .sidebar.open {
