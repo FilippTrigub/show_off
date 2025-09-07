@@ -71,18 +71,24 @@ class MCPLLMAgent:
                     #     cwd=str(Path(__file__).parent),
                     #     env=dict(os.environ)
                     # ),
-                    "linkedin": MCPServerSettings(
-                        command="uv",
-                        args=["run", "python", "servers/linkedin_mcp/linkedin_mcp/server.py"],
-                        cwd=str(Path(__file__).parent),
-                        env=dict(os.environ)
-                    ),
+                    # "linkedin": MCPServerSettings(
+                    #     command="uv",
+                    #     args=["run", "python", "servers/linkedin_mcp/linkedin_mcp/server.py"],
+                    #     cwd=str(Path(__file__).parent),
+                    #     env=dict(os.environ)
+                    # ),
                     # "twitter": MCPServerSettings(
                     #     command="uv",
                     #     args=["run", "python", "servers/twitter_mcp_python/server.py"],
                     #     cwd=str(Path(__file__).parent),
                     #     env=dict(os.environ)
                     # )
+                    "mongodb": MCPServerSettings(
+                        command="npx",
+                        args=["-y", "mongodb-mcp-server", "--connectionString", "mongodb+srv://gh_action_db_user:MGlA8WBDGEapMh8d@cluster0.kyvyzkz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",],
+                        cwd=str(Path(__file__).parent),
+                        env=dict(os.environ)
+                    ),
                 }
             ),
             openai=OpenAISettings(
@@ -111,7 +117,8 @@ class MCPLLMAgent:
                 # "blackbox",
                 # "twitter",
                 # "bluesky",
-                "linkedin"
+                # "linkedin"
+                "mongodb"
             ]
         )
         return agent

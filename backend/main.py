@@ -1,4 +1,6 @@
 import os
+from contextlib import asynccontextmanager
+
 import yaml
 import pymongo
 from dotenv import load_dotenv
@@ -30,6 +32,14 @@ def serialize_objectid(item_dict):
                     elif isinstance(list_item, ObjectId):
                         value[i] = str(list_item)
     return item_dict
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Code to run BEFORE startup
+    print("App started successfully.")
+
+    yield  # yield the app to the context manager
 
 
 app = FastAPI()
