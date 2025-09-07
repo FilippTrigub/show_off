@@ -23,6 +23,7 @@ class ContentModel(MongoModel):
 
     # Required content attributes
     platform: str
+    status: str
     content: str
     image_content: List[str] = Field(default_factory=list)
     video_content: List[str] = Field(default_factory=list)
