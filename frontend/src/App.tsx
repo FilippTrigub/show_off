@@ -16,7 +16,7 @@ const convertContentItemToPost = (item: ContentItem): Post => ({
     },
     content: item.content || '',
     status: item.status === 'pending' ? 'pending' : 
-           item.status === 'rephrased' ? 'approved' : 
+           item.status === 'rephrased' ? 'pending' : 
            item.status === 'rejected' ? 'disapproved' : 'posted',
     media: item.media || [],
     repository: item.repository,
