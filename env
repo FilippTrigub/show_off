@@ -1,0 +1,22 @@
+BLACKBOX_API_KEY=sk-oos1zcvs3-Cf88UBiCikvQ
+OPENROUTER_API_KEY=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
+
+BLUESKY_IDENTIFIER=filipptrigub.bsky.social
+BLUESKY_APP_PASSWORD=cien-q6dn-zy45-6ybv
+BLUESKY_SERVICE_URL=https://bsky.social
+
+LINKEDIN_CLIENT_ID=77ywc227zjrfnq
+LINKEDIN_CLIENT_SECRET=WPL_AP1.19aNqdfSfsvsIJSr.H4pTBw==
+LINKEDIN_REDIRECT_URI=http://localhost:3000/callback
+
+TWITTER_API_KEY=jrHaX4O1gIt8a60fzGMSp2JvU
+TWITTER_API_SECRET_KEY=9lvfH4288WazQdkAp8l2eyjSL84UQiDBl1ZF34If7bRCoUevio
+TWITTER_ACCESS_TOKEN=1707336796298772480-mYy5EJwykWZ2UEsWAEELxJ356fyCWW
+TWITTER_ACCESS_TOKEN_SECRET=VbKbQKwSWFGG0DHdQ9M4WXlhmhFXij8XHVTSvLFKxpU5n
+
+MONGODB_URI=mongodb+srv://gh_action_db_user:MGlA8WBDGEapMh8d@cluster0.kyvyzkz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_DB_NAME=show_off_dev
+
+# Application Configuration
+LOG_LEVEL=INFO
+LOG_RESPONSES=false
