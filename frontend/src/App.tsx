@@ -293,7 +293,6 @@ const App: React.FC = () => {
                     currentPushId={currentPushId}
                     onLoadPush={loadPush}
                     isOpen={isSidebarOpen}
-                    backendConnected={backendConnected}
                     onOverlayClick={() => setIsSidebarOpen(false)}
                 />
 

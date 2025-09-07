@@ -6,7 +6,6 @@ interface SidebarProps {
     currentPushId: string | null;
     onLoadPush: (pushId: string) => void;
     isOpen: boolean;
-    backendConnected: boolean;
     onOverlayClick: () => void;
 }
 
@@ -15,7 +14,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     currentPushId,
     onLoadPush,
     isOpen,
-    backendConnected,
     onOverlayClick
 }) => {
     return (
