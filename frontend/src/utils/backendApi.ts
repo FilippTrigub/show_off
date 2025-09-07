@@ -95,6 +95,8 @@ export const getContentById = async (contentId: string): Promise<ContentItem> =>
 
 // Rephrase content via backend
 export const rephraseContent = async (contentId: string, tone?: number): Promise<string> => {
+    console.log('rephraseContent called with:', { contentId, tone });
+    
     // Convert tone to instructions for the backend
     const getInstructionsFromTone = (tone: number = 50): string => {
         if (tone < 30) {
@@ -106,13 +108,32 @@ export const rephraseContent = async (contentId: string, tone?: number): Promise
         }
     };
 
-    const response = await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/rephrase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instructions: getInstructionsFromTone(tone) })
-    });
-    const result = await response.json();
-    return result.content;
+    const instructions = getInstructionsFromTone(tone);
+    console.log('Using instructions:', instructions);
+    
+    try {
+        const response = await fetchWithExponentialBackoff(`${BACKEND_URL}/content/${contentId}/rephrase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instructions })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Rephrase API response:', result);
+        
+        if (!result.content) {
+            throw new Error('No content returned from rephrase API');
+        }
+        
+        return result.content;
+    } catch (error) {
+        console.error('Error in rephraseContent:', error);
+        throw error;
+    }
 };
 
 // Approve content and post to social media

@@ -90,6 +90,47 @@ const App: React.FC = () => {
     // Convert tone from 0-100 range to 0-1 range for backend
     const normalizedTone = tone / 100;
 
+    // Helper function to refresh content from backend
+    const refreshContentFromBackend = async () => {
+        try {
+            console.log('Refreshing content from backend...');
+            const contentItems = await getContentItems();
+            
+            // Convert backend content to posts
+            const backendPosts = contentItems.map(convertContentItemToPost);
+            
+            // Group posts by repository/branch for history
+            const groupedPosts = backendPosts.reduce((acc, post) => {
+                const key = `${post.repository || 'unknown'}-${post.branch || 'main'}`;
+                if (!acc[key]) {
+                    acc[key] = [];
+                }
+                acc[key].push(post);
+                return acc;
+            }, {} as Record<string, Post[]>);
+
+            // Create push history from grouped posts
+            const newPushes: PushHistory[] = Object.entries(groupedPosts).map(([key, posts]) => ({
+                id: key,
+                posts
+            }));
+
+            setPostHistory(newPushes);
+            
+            // Update current posts if we're viewing a specific push
+            if (currentPushId) {
+                const currentPush = newPushes.find(p => p.id === currentPushId);
+                if (currentPush) {
+                    setPosts(currentPush.posts);
+                }
+            }
+            
+            console.log('Content refreshed successfully');
+        } catch (error) {
+            console.error('Error refreshing content:', error);
+        }
+    };
+
     const showNotification = (msg: string) => {
         if (messageTimeoutRef.current) {
             clearTimeout(messageTimeoutRef.current);
@@ -146,34 +187,16 @@ const App: React.FC = () => {
         setIsLoading(prev => ({ ...prev, [postId]: true }));
         try {
             if (backendConnected) {
+                console.log('Rephrasing post with ID:', postId);
+                
                 // Use backend rephraseContent API
-                await rephraseContent(postId, normalizedTone);
+                const rephraseResult = await rephraseContent(postId, normalizedTone);
+                console.log('Rephrase result:', rephraseResult);
                 
-                // Reload content to get updated text
-                const contentItems = await getContentItems();
-                const updatedPost = contentItems.find(item => item._id === postId);
+                // Use our refresh helper to reload all content
+                await refreshContentFromBackend();
                 
-                if (updatedPost) {
-                    const convertedPost = convertContentItemToPost(updatedPost);
-                    
-                    // Update posts if it exists there
-                    setPosts(prevPosts => 
-                        prevPosts.map(post => 
-                            post.id === postId ? convertedPost : post
-                        )
-                    );
-                    
-                    // Update post history
-                    setPostHistory(prevHistory => 
-                        prevHistory.map(pushHistory => ({
-                            ...pushHistory,
-                            posts: pushHistory.posts.map(post => 
-                                post.id === postId ? convertedPost : post
-                            )
-                        }))
-                    );
-                }
-                showNotification('Post rephrased successfully');
+                showNotification('Post rephrased successfully!');
             } else {
                 // Fallback to direct MCP call if backend is unavailable
                 const { rephraseWithMCP } = await import('./utils/mcpApi');
