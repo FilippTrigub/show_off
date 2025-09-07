@@ -23,7 +23,6 @@ from mcp_agent.config import (
     OpenAISettings,
 )
 from mcp_agent.agents.agent import Agent
-from mcp_agent.workflows.llm.augmented_llm_ollama import OllamaAugmentedLLM
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 
 
