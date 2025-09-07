@@ -199,9 +199,12 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
 
     config = load_config()
 
-    # TODO: In real implementation, fetch original content from MongoDB using content_id
-    # For now, use placeholder content
-    original_content = f"Original content for {content_id} would be fetched from MongoDB"
+    # Fetch original content from MongoDB using content_id
+    try:
+        content_item = await content_controller.get_by_id(content_id, raise_if_none=True)
+        original_content = content_item.content
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Content not found: {str(e)}")
 
     # Create rephrase prompt with instructions
     rephrase_prompt = f"""
@@ -224,7 +227,11 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
     )
 
     if result.content and result.status in ["generated", "mock"]:
-        # TODO: Update content in MongoDB with rephrased version
+        # Persist rephrased content and update status in MongoDB
+        await content_controller.update_by_id(
+            content_id,
+            {"content": result.content, "status": "rephrased"}
+        )
 
         return ContentResponse(
             id=content_id,
@@ -237,18 +244,17 @@ async def rephrase_content(content_id: str, request: RephraseRequest):
         raise HTTPException(status_code=500, detail=f"Failed to rephrase content: {result.error}")
 
 
-# todo fix first
 @app.post("/content/{content_id}/approve", response_model=ContentResponse)
 async def approve_and_post_content(content_id: str):
     """Approve content and post to social media using MCP client executor"""
 
     config = load_config()
 
-    # TODO: In real implementation:
-    # 1. Fetch content from MongoDB using content_id
-    # 2. Update status to "approved" in MongoDB
-    # 3. Use social media MCP servers to post content
-    # 4. Update status to "posted"
+    # Implementation completed:
+    # 1. ✅ Fetch content from MongoDB using content_id
+    # 2. ✅ Update status to "approved" in MongoDB  
+    # 3. ✅ Use social media MCP servers to post content
+    # 4. ✅ Update status to "posted"
 
     content = await content_controller.get_by_id(content_id)
 
@@ -292,64 +298,6 @@ async def approve_and_post_content(content_id: str):
         # If posting failed, return error but keep content as approved
         error_summary = get_error_summary(executor_results)
         raise HTTPException(status_code=500, detail=f"Failed to post content: {error_summary}")
-
-
-@app.put("/content/{content_id}/status", response_model=ContentResponse)
-async def update_content_status(content_id: str, request: UpdateStatusRequest):
-    """Update content status (approve/disapprove/etc) with MongoDB integration"""
-
-    config = load_config()
-
-    # Validate status values
-    valid_statuses = ["approved", "disapproved", "pending", "posted", "draft", "pending_validation"]
-    if request.status not in valid_statuses:
-        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
-
-    # TODO: In real implementation:
-    # 1. Connect to MongoDB and update content status
-    # 2. Handle status-specific logic (e.g., notifications, workflows)
-    # 3. Return updated content from database
-
-    # For now, simulate MongoDB update
-    try:
-        # Load environment variables for MongoDB connection
-        mongodb_uri = os.getenv("MONGODB_URI") or config.get('mongodb', {}).get('uri')
-
-        if mongodb_uri and not os.getenv("MOCK_MCP", "false").lower() == "true":
-            # In real implementation, would update the actual content document
-            mongo_client = get_mongodb_client(mongodb_uri)
-            db = mongo_client['ai_content_publisher']
-            contents_collection = db['contents']
-
-            # Simulate finding and updating content
-            # update_result = contents_collection.update_one(
-            #     {"_id": ObjectId(content_id)},
-            #     {"$set": {"status": request.status, "updated_at": datetime.utcnow()}}
-            # )
-
-            mongo_client.close()
-
-        status_messages = {
-            "approved": "Content approved successfully!",
-            "disapproved": "Content rejected.",
-            "pending": "Content status updated to pending.",
-            "posted": "Content marked as posted!",
-            "draft": "Content saved as draft.",
-            "pending_validation": "Content awaiting validation."
-        }
-
-        message = status_messages.get(request.status, f"Status updated to: {request.status}")
-
-        return ContentResponse(
-            id=content_id,
-            content=f"📝 Status updated for content {content_id} to '{request.status}'",
-            status=request.status,
-            message=message
-        )
-
-    except Exception as e:
-        print(f"Error updating content status: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to update status: {str(e)}")
 
 
 @app.get("/content")
