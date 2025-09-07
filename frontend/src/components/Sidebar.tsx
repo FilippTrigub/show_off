@@ -32,9 +32,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <h2 className="text-2xl font-bold mb-3 text-white bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
                         Content History
                     </h2>
-                    <div className={`text-xs px-3 py-1 rounded-full ${backendConnected ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                        {backendConnected ? '🟢 Backend Connected' : '🔴 Mock Data'}
-                    </div>
                 </div>
                 <ul className="flex-grow overflow-y-auto space-y-3" style={{ paddingTop: '0' }}>
                     {postHistory.map(push => (
